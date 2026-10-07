@@ -1,6 +1,6 @@
 import { definition } from './catalogue';
 import { connected, groupKey, groups, initialBoard, multiplier, stateKey, visible } from './geometry';
-import { evaluateMove, hasContinuation } from './moves';
+import { evaluateMove, hasContinuation, hasProgressingContinuation } from './moves';
 import { COLORS, type Difficulty, type Game, type GameEvent, type Gain, type Move, type Player, type Snapshot } from './types';
 export const TURN_DURATION = 300_000;
 export const RULES_VERSION = 'dockers-2026-10-07' as const;
@@ -17,7 +17,7 @@ export function createGame(names: string[], now = Date.now(), random = Math.rand
   const game: Game = { difficulty, version: 1, rulesVersion: RULES_VERSION, id: crypto.randomUUID(), board: initialBoard(), players, activePlayer: Math.floor(random() * names.length), turn: 1, movesMade: 0, phase: 'mouvements', customsId: null, opened: false, visited: {}, turnStartedAt: now, deadline: now + TURN_DURATION, snapshot: null as unknown as Snapshot, events: [], result: null };
   initHistory(game); game.snapshot = snapshotOf(game);
   log(game, { kind: 'début', at: now, text: `Début de partie en mode ${difficulty}. ${players[game.activePlayer].name} ouvre le jeu ; les couleurs et le premier joueur ont été tirés au sort.` });
-  if (!hasContinuation(game)) finish(game, now, 'Aucune séquence de trois coups n’est possible.');
+  const reason = continuationReason(game); if (reason) finish(game, now, reason);
   return game;
 }
 export function gainsForMove(before: Game, after: Game, move: Move): Gain[] {
@@ -39,12 +39,21 @@ function finish(game: Game, now: number, reason: string, survivor?: number) {
   game.phase = 'terminée'; game.result = { reason, winners: survivor !== undefined ? [survivor] : active.filter(p => p.score === best).map(p => p.id) };
   log(game, { at: now, kind: 'fin', text: reason });
 }
+const PIVOTS_ONLY_REASON = 'Les trois coups ne peuvent être que des pivots : la partie se termine aux scores acquis.';
+function continuationReason(game: Game): string | null {
+  const translated = game.events.some(e => e.turn === game.turn && e.kind === 'mouvement' && !e.reverted && (e.move?.kind === 'bascule' || e.move?.kind === 'chute'));
+  if (hasProgressingContinuation(game, translated)) return null;
+  return hasContinuation(game)
+    ? PIVOTS_ONLY_REASON
+    : 'Impossible de compléter les trois coups : la partie se termine aux scores acquis.';
+}
 export function tick(game: Game, now = Date.now()): Game { return game.phase !== 'terminée' && now > game.deadline ? abandon(game, now, true) : game; }
 export function resumeGame(input: Game, now = Date.now()): Game {
   const current = tick(input, now);
-  if (current.phase !== 'mouvements' || hasContinuation(current)) return current;
+  if (current.phase !== 'mouvements') return current;
+  const reason = continuationReason(current); if (!reason) return current;
   const game = clone(current);
-  finish(game, now, 'Impossible de compléter les trois coups : la partie se termine aux scores acquis.');
+  finish(game, now, reason);
   return game;
 }
 export function playMove(input: Game, move: Move, now = Date.now()): Game {
@@ -52,13 +61,15 @@ export function playMove(input: Game, move: Move, now = Date.now()): Game {
   if (now > input.deadline) return abandon(input, now, true);
   if (input.phase !== 'mouvements') throw new Error('Les trois mouvements sont effectués. Terminez la décision Douane.');
   const check = evaluateMove(input, move); if (!check.ok) throw new Error(check.reason);
+  const terminal = continuationReason(input);
+  if (terminal === PIVOTS_ONLY_REASON) { const ended = clone(input); finish(ended, now, terminal); return ended; }
   const game = clone(input); const before = clone(input.board.find(c => c.id === move.crateId)!);
   game.board = check.board!; game.opened = true; game.movesMade++;
   game.visited[move.crateId] = [...(game.visited[move.crateId] ?? [stateKey(before)]), stateKey(check.moved!)];
   const gains = gainsForMove(input, game, move); for (const gain of gains) game.players[gain.playerId].score += gain.points;
   log(game, { kind: 'mouvement', at: now, text: `${definition(move.crateId).name} : ${move.kind}${move.kind === 'pivot' ? ` de ${move.quarterTurns * 90}°` : ` vers le ${move.direction}`}.`, move, before, after: clone(check.moved!), gains });
   if (game.movesMade === 3) game.phase = 'douane';
-  else if (!hasContinuation(game)) finish(game, now, 'Impossible de compléter les trois coups : la partie se termine aux scores acquis.');
+  else { const reason = continuationReason(game); if (reason) finish(game, now, reason); }
   return game;
 }
 export function customs(input: Game, crateId: number | null, now = Date.now()): Game {
@@ -78,7 +89,7 @@ function beginNextTurn(game: Game, now: number) {
   while (game.players[next].abandonedAt !== null) next = (next + 1) % game.players.length;
   game.activePlayer = next; game.turn++; game.movesMade = 0; game.phase = 'mouvements'; game.turnStartedAt = now; game.deadline = now + TURN_DURATION;
   initHistory(game); game.snapshot = snapshotOf(game);
-  if (!hasContinuation(game)) finish(game, now, 'Aucune séquence de trois coups n’est possible : décompte final.');
+  const reason = continuationReason(game); if (reason) finish(game, now, reason);
 }
 export function abandon(input: Game, now = Date.now(), expired = false): Game {
   if (input.phase === 'terminée') return input;

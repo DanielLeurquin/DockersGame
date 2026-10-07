@@ -18,8 +18,8 @@ Une apparition correcte du plateau ne suffit pas : les parcours appliquent réel
 
 ## Résultats du 7 octobre 2026
 
-- 68 tests du moteur et de la persistance réussis.
-- 13 parcours Playwright réussis dans Chromium, dont une vue tablette, une sélection de cube 3D et le fonctionnement sans WebGL.
+- 73 tests du moteur et de la persistance réussis.
+- 14 parcours Playwright réussis dans Chromium, dont une vue tablette, une sélection de cube 3D et le fonctionnement sans WebGL.
 - Compilation TypeScript et Vite réussie avec la base de publication `/DockersGame/`.
 
 ## Évolution de l’expérience
@@ -37,3 +37,5 @@ Les modifications utilisateur ajoutent le choix Normal/Facile, l’inspection li
 Le thème chaleureux maritime et l’inspection limitée à la vue 3D sont vérifiés sur les captures tablette. Les parcours vérifient l’absence de grille des faces, Normal sélectionné par défaut et l’indisponibilité de l’inspection sans WebGL sans bloquer le jeu.
 
 DEC-051 : pivot et bascule refusés pour tous les groupes rangés, chute maintenue sous conditions. Les tests couvrent les trois niveaux, les couleurs sans propriétaire, le déblocage par masquage et chute, ainsi que la fin d’une reprise sans séquence légale. Le parcours navigateur prépare une position complète valide de 27 caisses avec une paire au sommet, vérifie les deux flèches interdites, fait chuter une caisse et vérifie le pivot redevenu disponible sur l’autre.
+
+DEC-052 : fin spécifique si seuls trois pivots sont possibles, sur une ou plusieurs caisses. Tests des pivots préparant une bascule, de la chute suivie de pivots, du choix volontaire de trois pivots avec alternative mixte et d’une reprise sur 27 caisses au sol. La reprise enregistre une seule fin et conserve scores et classement.

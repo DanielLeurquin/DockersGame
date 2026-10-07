@@ -98,3 +98,5 @@ Le mode choisi ne peut pas être changé pendant la partie. Les anciennes sauveg
 Le thème des quais associe bois chaleureux, sable et bleu marin. L’inspection autorisée affiche uniquement le cube 3D et ses commandes : aucune grille de faces ni direction cardinale. Sans WebGL, l’inspection visuelle est indisponible ; les commandes de jeu accessibles restent utilisables.
 
 À la reprise, la recherche de suite légale est appliquée avec les règles courantes. Une impasse détectée termine la partie aux scores acquis sans restaurer le plateau. Les coups déjà enregistrés ne sont pas annulés par cette correction.
+
+DEC-052 : si toutes les séquences complètes possibles du tour sont trois pivots, sur une ou plusieurs caisses, terminer aux scores acquis. La recherche considère aussi les déplacements préparés par un pivot et les bascules/chutes déjà effectuées durant le tour. Cette condition ne proscrit pas trois pivots volontairement choisis quand une séquence mixte reste possible.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CATALOGUE } from '../src/engine/catalogue';
 import { abandon, clone, createGame, customs, gainsForMove, playMove, ranking, resumeGame, snapshotOf, tick, TURN_DURATION } from '../src/engine/game';
 import { at, connected, faceAt, groups, initialBoard, roll, stateKey, top, VALID_ORIENTATIONS, visible, yaw } from '../src/engine/geometry';
-import { candidates, evaluateMove, hasContinuation } from '../src/engine/moves';
+import { candidates, evaluateMove, hasContinuation, hasProgressingContinuation } from '../src/engine/moves';
 import { COLORS, type Game, type Move } from '../src/engine/types';
 import { upgradeSave, validateSave } from '../src/storage/save';
 import { beforeRoll, cube, fixture } from './helpers';
@@ -169,4 +169,49 @@ it('une reprise sans suite légale termine aux scores acquis, sans restauration'
   expect(resumed.phase).toBe('terminée'); expect(resumed.players[0].score).toBe(7);
   expect(resumed.board).toEqual(g.board); expect(g.phase).toBe('mouvements');
   expect(resumeGame(resumed,1200)).toBe(resumed);
+});
+
+
+function trappedCrate() {
+  const ring = [[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]];
+  const ids = [2,4,5,6,7,9,11,12];
+  return fixture([cube(1,0,0), ...ring.map(([x,y],i)=>cube(ids[i],x,y,0,'bleu'))]);
+}
+describe('fin si seuls trois pivots sont possibles', () => {
+  it('termine même quand trois pivots valides existent sur une seule caisse', () => {
+    const g=trappedCrate(); g.players[0].score=17;
+    expect(candidates(g).every(m=>m.kind==='pivot')).toBe(true);
+    expect(hasContinuation(g)).toBe(true); expect(hasProgressingContinuation(g)).toBe(false);
+    const end=resumeGame(g,1100); expect(end.phase).toBe('terminée');
+    expect(end.result!.reason).toContain('que des pivots'); expect(end.players[0].score).toBe(17);
+    expect(end.board).toEqual(g.board); expect(end.players.every(p=>p.abandonedAt===null)).toBe(true);
+    expect(move(g,{kind:'pivot',crateId:1,quarterTurns:1}).movesMade).toBe(0);
+  });
+  it('détecte aussi des pivots répartis sur plusieurs caisses', () => {
+    const board=[cube(1,0,0),cube(2,1,0),cube(3,0,1),cube(4,1,1)];
+    const ids=CATALOGUE.filter(c=>c.id>4 && c.faces.includes('bleu')).map(c=>c.id); let i=0;
+    for(let x=-1;x<=2;x++) for(let y=-1;y<=2;y++) if(x===-1||x===2||y===-1||y===2) board.push(cube(ids[i++],x,y,0,'bleu'));
+    const g=fixture(board); expect(new Set(candidates(g).map(m=>m.crateId)).size).toBe(4);
+    expect(hasContinuation(g)).toBe(true); expect(hasProgressingContinuation(g)).toBe(false);
+    expect(resumeGame(g,1100).phase).toBe('terminée');
+  });
+  it('ne termine pas si un pivot prépare une bascule légale', () => {
+    const g=fixture([cube(1,0,0)]);
+    g.visited[1].push(...candidates(g).filter(m=>m.kind==='bascule').map(m=>stateKey(evaluateMove(g,m).moved!)));
+    expect(candidates(g).every(m=>m.kind==='pivot')).toBe(true);
+    expect(hasProgressingContinuation(g)).toBe(true); expect(resumeGame(g,1100)).toBe(g);
+  });
+  it('une chute suivie de deux pivots ne provoque pas cette fin', () => {
+    const g=trappedCrate(); g.board[0]=cube(1,0,1,1); g.visited[1]=[stateKey(g.board[0])]; g.snapshot=snapshotOf(g);
+    let next=move(g,{kind:'chute',crateId:1,direction:'sud',quarterTurns:0});
+    expect(next.phase).toBe('mouvements'); expect(candidates(next).every(m=>m.kind==='pivot')).toBe(true);
+    expect(resumeGame(next,1200)).toBe(next);
+    next=move(next,{kind:'pivot',crateId:1,quarterTurns:1}); next=move(next,{kind:'pivot',crateId:1,quarterTurns:1});
+    expect(next.phase).toBe('douane'); expect(next.movesMade).toBe(3);
+  });
+  it('trois pivots choisis librement restent permis si une séquence avec bascule existe', () => {
+    let g=fixture([cube(1,0,0)]);
+    for(let i=0;i<3;i++) g=move(g,{kind:'pivot',crateId:1,quarterTurns:1});
+    expect(g.phase).toBe('douane'); expect(g.movesMade).toBe(3);
+  });
 });

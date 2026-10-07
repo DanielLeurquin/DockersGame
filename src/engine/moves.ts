@@ -49,14 +49,21 @@ export function candidates(state: Position, crateId?: number): Move[] {
   }
   return result;
 }
-export function hasContinuation(state: Position, remaining = 3 - state.movesMade, memo = new Map<string, boolean>()): boolean {
-  if (remaining === 0) return connected(state.board);
-  const key = `${remaining}|${state.opened}|${state.customsId}|${state.board.map(c => `${c.id}:${stateKey(c)}`).join(';')}|${JSON.stringify(state.visited)}`;
+export function hasContinuation(state: Position, remaining = 3 - state.movesMade, memo = new Map<string, boolean>(), needsTranslation = false): boolean {
+  if (remaining === 0) return !needsTranslation && connected(state.board);
+  // Pivots preserve positions and groups. If no geometric translation exists,
+  // no sequence of pivots can create one; ignore history for this safe pruning.
+  if (needsTranslation && !candidates({ ...state, visited: {}, movesMade: 0 }).some(m => m.kind !== 'pivot')) return false;
+  const key = `${remaining}|${needsTranslation}|${state.opened}|${state.customsId}|${state.board.map(c => `${c.id}:${stateKey(c)}`).join(';')}|${JSON.stringify(state.visited)}`;
   const cached = memo.get(key); if (cached !== undefined) return cached;
   for (const move of candidates(state)) {
     const result = evaluateMove(state, move); if (!result.ok) continue;
     const next: Position = { ...state, board: result.board!, opened: true, movesMade: state.movesMade + 1, visited: { ...state.visited, [move.crateId]: [...(state.visited[move.crateId] ?? []), stateKey(result.moved!)] } };
-    if (hasContinuation(next, remaining - 1, memo)) { memo.set(key, true); return true; }
+    if (hasContinuation(next, remaining - 1, memo, needsTranslation && move.kind === 'pivot')) { memo.set(key, true); return true; }
   }
   memo.set(key, false); return false;
+}
+
+export function hasProgressingContinuation(state: Position, translationAlreadyPlayed = false): boolean {
+  return hasContinuation(state, 3 - state.movesMade, new Map(), !translationAlreadyPlayed);
 }

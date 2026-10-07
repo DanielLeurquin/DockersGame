@@ -287,3 +287,43 @@ test('groupe rangé : pivot refusé sur le plateau, chute autorisée puis déblo
   await select(page, 'Dakar'); await page.getByRole('button', { name: 'Pivoter', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pivoter à droite', exact: true })).toBeEnabled();
 });
+
+test('fin immédiate à la reprise quand seuls trois pivots restent possibles', async ({ page }) => {
+  await start(page);
+  await page.evaluate(async () => {
+    const storage=await import('/src/storage/save.ts' as string);
+    const geometry=await import('/src/engine/geometry.ts' as string);
+    const catalogue=await import('/src/engine/catalogue.ts' as string);
+    const engine=await import('/src/engine/game.ts' as string);
+    const g=await storage.loadGame();
+    // Plateau complet au sol : Boston neutre est encerclée par deux groupes rangés.
+    const reds=catalogue.CATALOGUE.filter((c:any)=>!c.faces.includes('bleu'));
+    const redsAt=[[-2,-2],[-2,-1],[-2,0],[-2,1],[-2,2],[-1,2]];
+    if (reds.length!==redsAt.length) throw new Error('Catalogue pédagogique inattendu');
+    const occupied=new Set(['0,0',...redsAt.map(p=>p.join(','))]);
+    const positions=[];
+    for(let x=-2;x<=2;x++) for(let y=-2;y<=2;y++) if(!occupied.has(`${x},${y}`)) positions.push([x,y]);
+    positions.push([3,0],[3,1]);
+    let blue=0;
+    for(const c of g.board) {
+      const red=reds.findIndex((d:any)=>d.id===c.id);
+      const [x,y]=c.id===1 ? [0,0] : red>=0 ? redsAt[red] : positions[blue++];
+      c.x=x; c.y=y; c.z=0;
+      const color=c.id===1 ? null : red>=0 ? 'rouge' : 'bleu';
+      c.orientation=[...geometry.VALID_ORIENTATIONS].map((s:string)=>s.split(',').map(Number)).find((o:number[])=>catalogue.definition(c.id).faces[o[0]]===color);
+    }
+    g.opened=true; g.snapshot=engine.snapshotOf(g);
+    g.visited=Object.fromEntries(g.board.map((c:any)=>[c.id,[geometry.stateKey(c)]]));
+    if(!storage.validateSave(g)) throw new Error('Sauvegarde pédagogique invalide');
+    storage.stageGame(g); await storage.saveGame(g);
+  });
+  await page.reload();
+  await expect(page.getByText('DÉCOMPTE FINAL')).toBeVisible();
+  await expect(page.getByText('Les trois coups ne peuvent être que des pivots : la partie se termine aux scores acquis.')).toBeVisible();
+  await expect(page.getByText('Victoire partagée !')).toBeVisible();
+  const end=await savedState(page); expect(end.movesMade).toBe(0);
+  expect(end.players.every((p:any)=>p.score===0 && p.abandonedAt===null)).toBe(true);
+  expect(end.events.filter((e:any)=>e.kind==='fin')).toHaveLength(1);
+  await page.reload(); await expect(page.getByText('DÉCOMPTE FINAL')).toBeVisible();
+  expect((await savedState(page)).events.length).toBe(end.events.length);
+});
