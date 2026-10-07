@@ -23,7 +23,16 @@ function texture(face: Face, name: string) {
   ctx.strokeStyle = 'rgba(57,43,25,.3)'; ctx.lineWidth = 2; ctx.strokeRect(17, 17, 222, 222);
   ctx.fillStyle = face ? 'rgba(255,255,255,.68)' : '#51472e'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (face) { ctx.font = 'bold 48px sans-serif'; ctx.fillText(SYMBOLS[face], 128, 104); ctx.font = 'bold 22px sans-serif'; ctx.fillText(LABELS[face].toUpperCase(), 128, 158); }
-  else { ctx.font = 'bold 15px sans-serif'; ctx.fillText('DOCKERS · PORT', 128, 82); ctx.font = `bold ${name.length > 10 ? 24 : 28}px Georgia`; ctx.fillText(name, 128, 126, 207); ctx.font = '13px monospace'; ctx.fillText('MARCHANDISES', 128, 170); }
+  else {
+    const lines = name.includes(' ') ? name.split(' ') : [name];
+    let fontSize = 48;
+    ctx.font = `bold ${fontSize}px Georgia`;
+    while (fontSize > 28 && lines.some(line => ctx.measureText(line).width > 200)) {
+      fontSize--; ctx.font = `bold ${fontSize}px Georgia`;
+    }
+    ctx.fillStyle = '#49351f';
+    lines.forEach((line, i) => ctx.fillText(line, 128, 128 + (i - (lines.length - 1) / 2) * fontSize * 1.12));
+  }
   ctx.fillStyle = '#785c3d'; for (const x of [20, 236]) for (const y of [20, 236]) { ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); }
   const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; cache.set(key, tex); return tex;
 }
