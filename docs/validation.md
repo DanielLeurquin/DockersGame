@@ -1,4 +1,4 @@
-# Validation de la première version
+# Validation du jeu et de son expérience
 
 Référence : 43 scénarios d’acceptation de DockersSpecs et décisions DEC-001 à DEC-045. Les tests unitaires utilisent des positions pédagogiques réduites pour isoler les règles ; les parcours navigateur utilisent le catalogue complet et le montage initial officiel.
 
@@ -19,5 +19,13 @@ Une apparition correcte du plateau ne suffit pas : les parcours appliquent réel
 ## Résultats du 7 octobre 2026
 
 - 59 tests du moteur et de la persistance réussis.
-- 4 parcours Playwright réussis dans Chromium, dont une vue tablette.
+- 10 parcours Playwright réussis dans Chromium, dont une vue tablette, une sélection de cube 3D et le fonctionnement sans WebGL.
 - Compilation TypeScript et Vite réussie avec la base de publication `/DockersGame/`.
+
+## Évolution de l’expérience
+
+Référence : `DockersSpecs/evolutions/experience-de-jeu/`, commit `0d30353`, exigences EXP-PL, EXP-BA, EXP-IN, EXP-PI et EXP-CH et 34 scénarios EXP-AC.
+
+Les parcours navigateur couvrent le choix direct de destination, la prévisualisation sans engagement, les doubles activations, le glissement sans coup, le pivot inverse refusé, le demi-tour en un coup, l’orientation gratuite de chute, l’inspection indépendante, les commandes accessibles et l’absence des anciens panneaux permanents. Les tests utilisent les mêmes validations métier que l’application.
+
+Les sorties Playwright contiennent notamment `bascule-immersive.png` et `plateau-tablette.png`. Les captures servent à vérifier la disposition ; elles ne remplacent pas les assertions sur les événements et la sauvegarde.

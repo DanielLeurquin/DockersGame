@@ -1,6 +1,6 @@
 # DOCKERS — application web locale
 
-Une application en français pour 2 à 4 joueurs sur un appareil partagé. Plateau 3D en bois stylisé, vues fixes, inspection des six faces, arbitrage des mouvements, scores événementiels, Douane, chronomètre de cinq minutes et sauvegarde locale.
+Une application en français pour 2 à 4 joueurs sur un appareil partagé. Plateau 3D en bois stylisé, plateau immersif, déplacements directs et inspection 3D indépendante des six faces, arbitrage des mouvements, scores événementiels, Douane, chronomètre de cinq minutes et sauvegarde locale.
 
 ## Lancer le projet
 
@@ -37,7 +37,7 @@ La compilation TypeScript, les tests de règles et les parcours Playwright sont 
 
 ## Règles de référence
 
-Les spécifications sont dans [DanielLeurquin/DockersSpecs](https://github.com/DanielLeurquin/DockersSpecs), référence de départ `5a9759d`. Les dernières décisions utilisateur priment sur le livret physique. Aucun fichier de DockersSpecs n’est modifié par cette réalisation.
+Les spécifications sont dans [DanielLeurquin/DockersSpecs](https://github.com/DanielLeurquin/DockersSpecs), référence métier `5a9759d` et évolution de l’expérience `0d30353`. Les dernières décisions utilisateur priment sur le livret physique. Aucun fichier de DockersSpecs n’est modifié par cette réalisation.
 
 Points essentiels :
 
@@ -63,7 +63,8 @@ Le workflow `.github/workflows/pages.yml` compile avec la base `/DockersGame/`, 
 ## Architecture
 
 - `src/engine/` : catalogue, rotations physiques, géométrie, mouvements, recherche de continuation, scores et transitions de partie. Aucun import React ou Three.js.
-- `src/components/Board.tsx` : représentation 3D et caméra ; les animations ne décident jamais des règles.
+- `src/components/Board.tsx` : scène, destinations cliquables, flèches et inspecteur 3D ; les animations ne décident jamais des règles.
+- `src/components/GameStage.tsx` : écran immersif, menu flottant, actions directes et panneaux secondaires.
 - `src/storage/` : validation et persistance versionnée.
 - `src/App.tsx` : parcours local, inspection, actions, aide, résultat et horloge.
 - `tests/` et `e2e/` : vérification métier et navigateur.
@@ -78,3 +79,15 @@ PAGES_BASE=/DockersGame/ npm run preview
 ```
 
 Ouvrir le chemin `/DockersGame/` indiqué par Vite.
+
+## Jouer depuis le plateau
+
+- Sélectionner une caisse, puis choisir **Basculer**, **Chuter** ou **Pivoter** dans le menu flottant. On peut aussi choisir le mode avant la caisse.
+- **Bascule** : cliquer une case mise en évidence pour appliquer le coup directement.
+- **Chute** : régler au besoin l’orientation d’arrivée avec les flèches gratuites, puis cliquer la case. Le dessus est conservé et l’ensemble coûte un seul coup.
+- **Pivot** : cliquer une flèche autour de la caisse pour un quart de tour. Activer « Demi-tour » avant la flèche pour réaliser 180° en un seul coup.
+- Les mouvements appliqués sont irréversibles. Survoler une destination ne joue aucun coup. Glisser pour observer et double-cliquer ne doivent pas ajouter un mouvement.
+- L’icône d’œil ouvre l’inspection 3D indépendante ; tourner ce cube ou consulter son dessous ne déplace pas la caisse réelle.
+- **Outils** donne accès aux scores, journal, liste des caisses, règles, vues, animations et abandon. Dans l’inspection, ouvrir **Commandes accessibles du mouvement** pour choisir les mêmes actions au clavier, même sans 3D.
+
+Les repères cachés par une caisse ne deviennent pas cliquables à travers celle-ci : passer en vue **Dessus** ou utiliser les commandes accessibles. Le joueur actif, le temps et la progression restent visibles ; ouvrir un panneau ne met pas la partie en pause.
