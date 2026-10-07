@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CATALOGUE } from '../src/engine/catalogue';
-import { abandon, clone, createGame, customs, gainsForMove, playMove, ranking, snapshotOf, tick, TURN_DURATION } from '../src/engine/game';
+import { abandon, clone, createGame, customs, gainsForMove, playMove, ranking, resumeGame, snapshotOf, tick, TURN_DURATION } from '../src/engine/game';
 import { at, connected, faceAt, groups, initialBoard, roll, stateKey, top, VALID_ORIENTATIONS, visible, yaw } from '../src/engine/geometry';
 import { candidates, evaluateMove, hasContinuation } from '../src/engine/moves';
 import { COLORS, type Game, type Move } from '../src/engine/types';
@@ -30,7 +30,7 @@ describe('Bascule, chute, pivot et Douane (AC-02–07, 15, 23, 25, 29, 32, 34)',
   it('ne permet pas de sortir du plateau, à tous les étages', () => { for (const z of [0,1,2]) { const g = fixture([cube(1,3,0,z)]); expect(evaluateMove(g, z ? {kind:'chute',crateId:1,direction:'est',quarterTurns:0} : {kind:'bascule',crateId:1,direction:'est'}).reason).toContain('7 × 7'); } });
   it('une chute descend au premier support et offre un pivot libre au contact', () => { const g = fixture([cube(1, 0, 0, 2, 'bleu'), cube(2, 1, 0, 0), cube(3, 1, 1, 1)]); const a = evaluateMove(g, { kind:'chute', crateId:1, direction:'est', quarterTurns:0 }); const b = evaluateMove(g, { kind:'chute', crateId:1, direction:'est', quarterTurns:3 }); expect(a.moved).toMatchObject({x:1,y:0,z:1}); expect(b.moved).toMatchObject({x:1,y:0,z:1}); expect(b.moved!.orientation[0]).toBe(g.board[0].orientation[0]); expect(a.moved!.orientation).not.toEqual(b.moved!.orientation); });
   it('descend au sol sans support et refuse de présenter cette chute comme bascule', () => { const g = fixture([cube(1, 0, 0, 2)]); expect(evaluateMove(g, {kind:'chute',crateId:1,direction:'est',quarterTurns:0}).moved!.z).toBe(0); expect(evaluateMove(g, {kind:'bascule',crateId:1,direction:'est'}).reason).toContain('chute'); });
-  it('le pivot autonome est possible au contact de la Douane et dans un groupe', () => { const g = fixture([cube(1,0,0,0,'bleu'),cube(7,1,0,0,'bleu')]); g.customsId=7; expect(evaluateMove(g,{kind:'pivot',crateId:1,quarterTurns:1}).ok).toBe(true); expect(evaluateMove(g,{kind:'bascule',crateId:1,direction:'ouest'}).reason).toContain('rangée'); });
+  it('le pivot autonome reste possible au contact de la Douane hors groupe', () => { const g = fixture([cube(1,0,0,0,'bleu'),cube(7,1,0,0,'bleu')]); g.board[1]=cube(7,1,0,0,'rouge'); g.customsId=7; expect(evaluateMove(g,{kind:'pivot',crateId:1,quarterTurns:1}).ok).toBe(true); expect(evaluateMove(g,{kind:'bascule',crateId:1,direction:'est'}).ok).toBe(false); });
   it('refuse le pivot sans changement et tout mouvement de la Douane', () => { const g=fixture([cube(1,0,0,1)]); expect(evaluateMove(g,{kind:'pivot',crateId:1,quarterTurns:4} as unknown as Move).ok).toBe(false); g.customsId=1; for(const m of [{kind:'pivot',crateId:1,quarterTurns:1},{kind:'bascule',crateId:1,direction:'est'},{kind:'chute',crateId:1,direction:'est',quarterTurns:0}] as Move[]) expect(evaluateMove(g,m).reason).toContain('Douane'); });
   it('interdit une chute sur la Douane même depuis un étage plus haut', () => { const g=fixture([cube(1,0,0,2),cube(2,1,0,0)]); g.customsId=2; expect(evaluateMove(g,{kind:'chute',crateId:1,direction:'est',quarterTurns:0}).reason).toContain('Douane'); });
   it('ne vérifie pas le volume balayé d’une bascule', () => { const g=fixture([cube(1,0,0),cube(2,1,1)]); expect(evaluateMove(g,{kind:'bascule',crateId:1,direction:'est'}).ok).toBe(true); });
@@ -56,8 +56,8 @@ describe('Groupes, score et déblocage (AC-08–13, 24, 30, 31, 42)', () => {
     expect(groups(g.board).some(group=>group.ids.includes(9))).toBe(true); g=move(g,{kind:'chute',crateId:2,direction:'ouest',quarterTurns:0}); expect(groups(g.board).some(group=>group.ids.includes(9))).toBe(false);
     g=move(g,{kind:'bascule',crateId:9,direction:'nord'}); expect(g.players[3].score).toBe(6);
   });
-  it('fusion de deux paires compte les cinq caisses une fois', () => { const g=fixture([cube(1,-2,0,0,'bleu'),cube(7,-1,0,0,'bleu'),cube(12,1,0,0,'bleu'),cube(2,2,0,0,'bleu'),beforeRoll(5,0,-1,'nord','bleu')]); const next=move(g,{kind:'bascule',crateId:5,direction:'nord'}); expect(next.players[0].score).toBe(5); expect(next.events.at(-1)!.gains).toHaveLength(1); });
-  it('ne recompte pas un groupe inchangé lors d’un pivot', () => { const g=fixture([cube(1,0,0,0,'bleu'),cube(7,1,0,0,'bleu')]); const next=move(g,{kind:'pivot',crateId:1,quarterTurns:1}); expect(next.players[0].score).toBe(0); });
+  it('fusion de deux paires compte les cinq caisses une fois', () => { const g=fixture([cube(1,-2,0,0,'bleu'),cube(7,-1,0,0,'bleu'),cube(12,1,0,0,'bleu'),cube(2,2,0,0,'bleu'),beforeRoll(5,0,-1,'nord','bleu')]); const next=move(g,{kind:'bascule',crateId:5,direction:'nord'}); expect(next.players[0].score).toBe(5); expect(next.events.find(e=>e.kind==='mouvement')!.gains).toHaveLength(1); });
+  it('ne recompte pas un groupe inchangé quand une autre caisse pivote', () => { const g=fixture([cube(1,0,0,0,'bleu'),cube(7,1,0,0,'bleu'),cube(2,0,1)]); const next=move(g,{kind:'pivot',crateId:2,quarterTurns:1}); expect(next.players[0].score).toBe(0); });
   it('les couleurs sans joueur bloquent mais ne créditent personne', () => { const g=fixture([cube(5,0,0,0,'vert'),cube(9,1,0,0,'vert')],2); expect(evaluateMove(g,{kind:'bascule',crateId:5,direction:'ouest'}).reason).toContain('rangée'); const before=fixture([beforeRoll(5,0,-1,'nord','vert'),cube(9,1,0,0,'vert')],2); const next=move(before,{kind:'bascule',crateId:5,direction:'nord'}); expect(next.players.map(p=>p.score)).toEqual([0,0]); });
   it('dévoilement bleu + groupe rouge : crédits ordonnés et nouveau gain possible', () => {
     const g=fixture([cube(1,0,0,0,'bleu'),cube(7,1,0,0,'bleu'),cube(2,0,0,1,'rouge'),cube(9,-2,0,0,'rouge')]);
@@ -71,9 +71,13 @@ describe('Tours, recherche de suite, histoire et terminal (AC-16–18)', () => {
   it('contact vertical compte, diagonale et deux amas distincts ne comptent pas', () => { expect(connected([cube(1,0,0),cube(2,0,0,1)])).toBe(true); expect(connected([cube(1,0,0),cube(2,1,1)])).toBe(false); expect(connected([cube(1,0,0),cube(2,1,0),cube(3,3,3),cube(4,2,3)])).toBe(false); });
   it('autorise une déconnexion temporaire mais exige la reconnexion au troisième coup', () => { const g=fixture([cube(1,0,0),cube(2,1,0)]); const first=move(g,{kind:'bascule',crateId:1,direction:'nord'}); expect(connected(first.board)).toBe(false); expect(first.phase).toBe('mouvements'); const second=move(first,{kind:'pivot',crateId:1,quarterTurns:1}); expect(second.movesMade).toBe(2); expect(evaluateMove(second,{kind:'pivot',crateId:1,quarterTurns:1}).reason).toContain('réunir'); expect(candidates(second).some(m=>evaluateMove(second,m).ok)).toBe(true); });
   it('mémorise les orientations, les coups intercalés ne permettent pas un retour exact', () => { let g=fixture([cube(1,0,0),cube(2,1,0)]); g=move(g,{kind:'pivot',crateId:1,quarterTurns:1}); g=move(g,{kind:'pivot',crateId:2,quarterTurns:1}); expect(evaluateMove(g,{kind:'pivot',crateId:1,quarterTurns:3}).reason).toContain('déjà occupé'); expect(evaluateMove(g,{kind:'pivot',crateId:1,quarterTurns:1}).ok).toBe(true); });
-  it('recherche une séquence complète, pas seulement un coup', () => { const g=fixture([cube(1,0,0,0,'bleu'),cube(7,1,0,0,'bleu')]); g.customsId=7; const c=g.board[0]; g.visited[1]=[stateKey(c),stateKey({...c,orientation:yaw(c.orientation,2)}),stateKey({...c,orientation:yaw(c.orientation,3)})]; expect(candidates(g)).toHaveLength(1); expect(hasContinuation(g)).toBe(false); });
-  it('conserve les gains d’une impasse normale, sans restaurer', () => { const g=fixture([cube(1,0,0,0,'bleu'),cube(7,1,0,0,'bleu')]); g.players[0].score=10; g.customsId=7; const c=g.board[0]; g.visited[1]=[stateKey(c),stateKey({...c,orientation:yaw(c.orientation,2)}),stateKey({...c,orientation:yaw(c.orientation,3)})]; const next=move(g,{kind:'pivot',crateId:1,quarterTurns:1}); expect(next.phase).toBe('terminée'); expect(next.board[0].orientation).not.toEqual(g.snapshot.board[0].orientation); expect(next.players[0].score).toBe(10); expect(next.result!.winners).toEqual([0]); });
-  it('partage une victoire à égalité', () => { const g=fixture([cube(1,0,0,0,'bleu'),cube(7,1,0,0,'bleu')]); g.customsId=7; const c=g.board[0]; g.visited[1]=[stateKey(c),stateKey({...c,orientation:yaw(c.orientation,2)}),stateKey({...c,orientation:yaw(c.orientation,3)})]; const next=move(g,{kind:'pivot',crateId:1,quarterTurns:1}); expect(next.result!.winners).toEqual([0,1,2,3]); });
+  it('recherche une séquence complète, pas seulement un coup', () => {
+    const g=fixture([cube(1,0,0,1,'bleu'),cube(7,0,0,0,'bleu')]);
+    g.visited[1]=[stateKey(g.board[0]),...candidates(g,1).filter(m=>!(m.kind==='chute' && m.direction==='est' && m.quarterTurns===0)).map(m=>stateKey(evaluateMove(g,m).moved!))];
+    expect(candidates(g)).toHaveLength(1); expect(hasContinuation(g)).toBe(false);
+  });
+  it('conserve les gains d’une impasse normale, sans restaurer', () => { const g=fixture([cube(1,0,0,1,'bleu'),cube(7,0,0,0,'bleu')]); g.players[0].score=10; const next=move(g,{kind:'chute',crateId:1,direction:'est',quarterTurns:0}); expect(next.phase).toBe('terminée'); expect(next.board[0].z).toBe(0); expect(next.players[0].score).toBe(12); expect(next.result!.winners).toEqual([0]); });
+  it('partage une victoire à égalité', () => { const g=fixture([cube(1,0,0,1,'bleu'),cube(7,0,0,0,'bleu')]); g.players.slice(1).forEach(p=>p.score=2); const next=move(g,{kind:'chute',crateId:1,direction:'est',quarterTurns:0}); expect(next.result!.winners).toEqual([0,1,2,3]); });
 });
 describe('Douane, délai inclusif, abandon et scores restaurés (AC-14, 27, 33, 35, 37–43)', () => {
   it('nécessite trois coups avant de décider la Douane, puis un premier placement', () => { const g=fixture([cube(1,0,0),cube(2,1,0)]); expect(()=>customs(g,1,1000)).toThrow('trois coups'); g.movesMade=3;g.phase='douane';expect(()=>customs(g,null,1000)).toThrow('obligatoire'); const next=customs(g,1,1000); expect(next.customsId).toBe(1);expect(next.turn).toBe(3);expect(next.movesMade).toBe(0); });
@@ -133,4 +137,36 @@ describe('modes de jeu et reprise', () => {
     const g = createGame(['A','B'], 1000); (g as unknown as {difficulty:string}).difficulty = 'autre';
     expect(validateSave(upgradeSave(g))).toBe(false);
   });
+});
+
+
+describe('caisse rangée : seule la chute est autorisée', () => {
+  it.each([0,1,2])('interdit tous les pivots et bascules du groupe au niveau %i', z => {
+    const g=fixture([cube(1,0,0,z,'bleu'),cube(7,1,0,z,'bleu')]);
+    for(const quarterTurns of [1,2,3] as const) expect(evaluateMove(g,{kind:'pivot',crateId:1,quarterTurns}).reason).toContain('seule la chute');
+    expect(evaluateMove(g,{kind:'bascule',crateId:1,direction:'ouest'}).reason).toContain('seule la chute');
+    expect(candidates(g,1).every(m=>m.kind==='chute')).toBe(true);
+    expect(evaluateMove(g,{kind:'chute',crateId:1,direction:'ouest',quarterTurns:2}).ok).toBe(z>0);
+    if(z===0) expect(candidates(g)).toEqual([]);
+    expect(()=>move(g,{kind:'pivot',crateId:1,quarterTurns:1})).toThrow('seule la chute');
+  });
+  it('un masquage débloque immédiatement le pivot de la caisse restante', () => {
+    const g=fixture([cube(1,0,0,0,'bleu'),cube(7,1,0,0,'bleu')]);
+    expect(evaluateMove(g,{kind:'pivot',crateId:1,quarterTurns:1}).ok).toBe(false);
+    g.board.push(cube(2,1,0,1));
+    expect(evaluateMove(g,{kind:'pivot',crateId:1,quarterTurns:1}).ok).toBe(true);
+  });
+  it('une couleur sans propriétaire reste bloquante pour le pivot', () => {
+    const g=fixture([cube(5,0,0,0,'vert'),cube(9,1,0,0,'vert')],2);
+    expect(evaluateMove(g,{kind:'pivot',crateId:5,quarterTurns:1}).reason).toContain('seule la chute');
+  });
+});
+
+
+it('une reprise sans suite légale termine aux scores acquis, sans restauration', () => {
+  const g=fixture([cube(1,0,0,0,'bleu'),cube(7,1,0,0,'bleu')]); g.players[0].score=7;
+  const resumed=resumeGame(g,1100);
+  expect(resumed.phase).toBe('terminée'); expect(resumed.players[0].score).toBe(7);
+  expect(resumed.board).toEqual(g.board); expect(g.phase).toBe('mouvements');
+  expect(resumeGame(resumed,1200)).toBe(resumed);
 });

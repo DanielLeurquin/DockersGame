@@ -6,6 +6,7 @@ export function evaluateMove(state: Position, move: Move, checkFinal = true): Mo
   if (!c) return { ok: false, reason: 'Cette caisse n’existe pas.' };
   if (c.id === state.customsId) return { ok: false, reason: 'La Douane interdit tout mouvement de cette caisse.' };
   if (!visible(state.board, c)) return { ok: false, reason: 'Une autre caisse repose dessus : cette caisse est immobile.' };
+  if (move.kind !== 'chute' && groups(state.board).some(g => g.ids.includes(c.id))) return { ok: false, reason: 'Cette caisse est rangée dans un groupe de couleur : seule la chute est autorisée.' };
   if (!state.opened && (move.kind !== 'chute' || c.z !== 2)) return { ok: false, reason: 'Pour ouvrir la partie, faites chuter une caisse du sommet.' };
   let moved: Crate = { ...c, orientation: [...c.orientation] };
   if (move.kind === 'pivot') {
@@ -26,7 +27,6 @@ export function evaluateMove(state: Position, move: Move, checkFinal = true): Mo
       moved.z = landingZ; moved.orientation = yaw(c.orientation, move.quarterTurns);
     } else {
       if (move.kind !== 'bascule') return { ok: false, reason: 'Cette destination est au même étage : choisissez une bascule.' };
-      if (groups(state.board).some(g => g.ids.includes(c.id))) return { ok: false, reason: 'Cette caisse est rangée : elle peut pivoter ou chuter, mais pas basculer.' };
       moved.orientation = roll(c.orientation, move.direction);
     }
   }

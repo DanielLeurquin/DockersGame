@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Anchor, ArrowRight, Box, Check, CircleHelp, Clock3, Compass, Layers3, Trophy, X } from 'lucide-react';
-import { abandon, createGame, customs, playMove, ranking, tick } from './engine/game';
+import { abandon, createGame, customs, playMove, ranking, resumeGame, tick } from './engine/game';
 import { initialBoard } from './engine/geometry';
 import type { Difficulty, Game } from './engine/types';
 import { loadGame, saveGame, stageGame } from './storage/save';
@@ -11,8 +11,8 @@ const HELPTEXT = [
   ['Le but du jeu', 'Rangez les caisses en groupes visibles d’au moins deux caisses de même couleur supérieure, au même étage, en contact par une face latérale. Le meilleur score gagne. Une couleur sur le dessus n’accorde pas un droit exclusif de déplacement.'],
   ['Un tour, trois mouvements', 'Vous disposez de cinq minutes pour effectuer exactement trois coups puis votre décision Douane. Le premier mouvement de la partie est une chute depuis le sommet. Une déconnexion temporaire est permise, mais toutes les caisses doivent former un seul ensemble connecté par faces au troisième coup.'],
   ['Bascule et chute', 'La bascule roule d’une face vers une case voisine libre, sans diagonale ni montée. Le dessus change. Une descente est une chute : elle conserve le dessus et s’arrête au premier support. Le pivot gratuit de chute tourne autour de Z, sans déplacement horizontal supplémentaire.'],
-  ['Pivoter', 'Une caisse au dessus non recouvert peut pivoter sur place, même rangée et en contact latéral, sauf si elle porte la Douane. Un pivot effectif coûte un coup. Un tour complet sans changement ne compte pas.'],
-  ['Scores et blocages', 'Le groupe complet rapporte sa taille ×1 au sol, ×3 au milieu, ×5 au sommet. Chaque nouveau rangement marque, y compris une fusion ou un groupe reformé par dévoilement. Le groupe de la caisse déplacée est crédité d’abord, celui dévoilé ensuite. Les couleurs adverses reçoivent leurs points. Une caisse rangée ne peut pas basculer ; un masquage ou une chute peut casser son groupe.'],
+  ['Pivoter', 'Une caisse au dessus non recouvert peut pivoter sur place, même en contact latéral, sauf si elle est rangée dans un groupe de couleur ou porte la Douane. Un pivot effectif coûte un coup. Un tour complet sans changement ne compte pas.'],
+  ['Scores et blocages', 'Le groupe complet rapporte sa taille ×1 au sol, ×3 au milieu, ×5 au sommet. Chaque nouveau rangement marque, y compris une fusion ou un groupe reformé par dévoilement. Le groupe de la caisse déplacée est crédité d’abord, celui dévoilé ensuite. Les couleurs adverses reçoivent leurs points. Une caisse rangée ne peut ni basculer ni pivoter ; seule la chute reste autorisée sous conditions ; un masquage ou une chute peut casser son groupe.'],
   ['La Douane', 'Après les trois coups, placez le jeton sur un dessus accessible ou confirmez son maintien. Le premier placement est obligatoire. La Douane interdit tout mouvement de sa caisse et toute arrivée ou passage au-dessus. Cette décision est comprise dans les cinq minutes.'],
   ['État exact et retour arrière', 'Une caisse ne peut retrouver ses mêmes coordonnées et sa même orientation pendant un tour. Les pivots sont inclus. Un mouvement effectué ne s’annule pas manuellement. La caméra et l’inspection ne sont pas des coups.'],
   ['Temps et abandon', 'Pas de pause. Un tour non terminé après cinq minutes vaut abandon ; une décision à l’échéance exacte est acceptée. L’abandon restaure le plateau et tous les scores du début de tour. Le prochain joueur actif reçoit trois coups et cinq minutes. La couleur abandonnée reste bloquante mais ne marque plus. Le dernier joueur actif gagne.'],
@@ -36,7 +36,7 @@ export default function App() {
     mounted.current = true;
     let cancelled = false;
     async function start() {
-      try { const saved = await loadGame(); if (!cancelled) { gameRef.current = saved; setGame(saved); } }
+      try { const saved = await loadGame(); if (!cancelled) { const resumed = saved ? resumeGame(saved) : null; if (resumed && resumed !== saved) commit(resumed); else { gameRef.current = resumed; setGame(resumed); } } }
       catch (e) { if (!cancelled) setError((e as Error).message); }
       if (!cancelled) setLoaded(true);
     }

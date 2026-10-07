@@ -40,6 +40,13 @@ function finish(game: Game, now: number, reason: string, survivor?: number) {
   log(game, { at: now, kind: 'fin', text: reason });
 }
 export function tick(game: Game, now = Date.now()): Game { return game.phase !== 'terminée' && now > game.deadline ? abandon(game, now, true) : game; }
+export function resumeGame(input: Game, now = Date.now()): Game {
+  const current = tick(input, now);
+  if (current.phase !== 'mouvements' || hasContinuation(current)) return current;
+  const game = clone(current);
+  finish(game, now, 'Impossible de compléter les trois coups : la partie se termine aux scores acquis.');
+  return game;
+}
 export function playMove(input: Game, move: Move, now = Date.now()): Game {
   if (input.phase === 'terminée') throw new Error('La partie est terminée.');
   if (now > input.deadline) return abandon(input, now, true);

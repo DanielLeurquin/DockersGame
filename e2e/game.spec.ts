@@ -256,3 +256,34 @@ test('mode Facile : seules les caisses ayant un coup légal sont inspectables', 
   await select(page, 'Zanzibar'); await expect(page.getByRole('button', { name: 'Inspecter la caisse' })).toHaveCount(0);
   await expect(page.locator('.live-score')).toHaveCount(2);
 });
+
+test('groupe rangé : pivot refusé sur le plateau, chute autorisée puis déblocage', async ({ page }) => {
+  await start(page);
+  await page.evaluate(async () => {
+    const storage = await import('/src/storage/save.ts' as string);
+    const geometry = await import('/src/engine/geometry.ts' as string);
+    const catalogue = await import('/src/engine/catalogue.ts' as string);
+    const engine = await import('/src/engine/game.ts' as string);
+    const g = await storage.loadGame();
+    // Position pédagogique complète : deux caisses adjacentes bleues au sommet.
+    for (const id of [19,22]) {
+      const c=g.board.find((c: {id:number})=>c.id===id);
+      c.orientation=[...geometry.VALID_ORIENTATIONS].map((key: string)=>key.split(',').map(Number)).find((o: number[])=>catalogue.definition(id).faces[o[0]]==='bleu');
+    }
+    g.opened=true; g.snapshot=engine.snapshotOf(g);
+    g.visited=Object.fromEntries(g.board.map((c: any)=>[c.id,[geometry.stateKey(c)]]));
+    if (!storage.validateSave(g)) throw new Error('Position pédagogique invalide');
+    storage.stageGame(g); await storage.saveGame(g);
+  });
+  await page.reload(); await select(page, 'Zanzibar'); await overhead(page);
+  await page.getByRole('button', { name: 'Pivoter', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pivoter à gauche', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Pivoter à droite', exact: true })).toBeDisabled();
+  await expect(page.getByText('Cette caisse est rangée dans un groupe de couleur : seule la chute est autorisée.', {exact:true})).toBeVisible();
+  expect((await savedState(page)).movesMade).toBe(0);
+  await page.getByRole('button', { name: 'Chuter', exact: true }).click();
+  await page.getByRole('button', { name: 'Chuter sur la case X 1, Y 2, sol', exact: true }).click();
+  await expect(page.locator('.essential-progress .done')).toHaveCount(1);
+  await select(page, 'Dakar'); await page.getByRole('button', { name: 'Pivoter', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pivoter à droite', exact: true })).toBeEnabled();
+});
