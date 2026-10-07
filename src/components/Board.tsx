@@ -39,7 +39,7 @@ function texture(face: Face, name: string) {
 const vectors = [new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, -1, 0)];
 function quaternion(c: Crate) { const e = vectors[c.orientation.indexOf(2)], t = vectors[c.orientation.indexOf(0)], s = vectors[c.orientation.indexOf(3)]; return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(e, t, s)); }
 function CrateMesh({ crate, selected, customs, grouped, onSelect, reduced, ghost = false }: { crate: Crate; selected: boolean; customs: boolean; grouped: boolean; onSelect: (id: number) => void; reduced: boolean; ghost?: boolean }) {
-  const group = useRef<THREE.Group>(null); const target = useMemo(() => new THREE.Vector3(crate.x, crate.z + .49, -crate.y), [crate.x, crate.y, crate.z]);
+  const group = useRef<THREE.Group>(null); const target = useMemo(() => new THREE.Vector3(crate.x, crate.z + .5, -crate.y), [crate.x, crate.y, crate.z]);
   const rotation = useMemo(() => quaternion(crate), [crate.orientation]);
   const data = definition(crate.id); const maps = useMemo(() => [2, 4, 0, 5, 3, 1].map(i => texture(data.faces[i], data.name)), [data]);
   const [hover, setHover] = useState(false);
@@ -49,7 +49,8 @@ function CrateMesh({ crate, selected, customs, grouped, onSelect, reduced, ghost
   return <>
     <group ref={group}>
       <mesh castShadow={!ghost} receiveShadow raycast={ghost ? () => {} : undefined} onClick={e => { e.stopPropagation(); onSelect(crate.id); }} onPointerOver={e => { e.stopPropagation(); setHover(true); document.body.style.cursor = 'pointer'; }} onPointerOut={() => { setHover(false); document.body.style.cursor = ''; }}>
-        <boxGeometry args={[.965, .965, .965]} />
+        {/* Match the grid spacing exactly: gaps would reveal hidden face colours. */}
+        <boxGeometry args={[1, 1, 1]} />
         {maps.map((map, i) => <meshStandardMaterial key={i} attach={`material-${i}`} map={map} transparent={ghost} opacity={ghost ? .38 : 1} depthWrite={!ghost} roughness={.87} color={hover ? '#fff8d9' : '#ffffff'} />)}
       </mesh>
     </group>
