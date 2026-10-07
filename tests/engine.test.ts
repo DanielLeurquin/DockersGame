@@ -4,7 +4,7 @@ import { abandon, clone, createGame, customs, gainsForMove, playMove, ranking, s
 import { at, connected, faceAt, groups, initialBoard, roll, stateKey, top, VALID_ORIENTATIONS, visible, yaw } from '../src/engine/geometry';
 import { candidates, evaluateMove, hasContinuation } from '../src/engine/moves';
 import { COLORS, type Game, type Move } from '../src/engine/types';
-import { validateSave } from '../src/storage/save';
+import { upgradeSave, validateSave } from '../src/storage/save';
 import { beforeRoll, cube, fixture } from './helpers';
 const move = (g: Game, m: Move) => playMove(g, m, 1100);
 const resetTurn = (g: Game) => { g.movesMade = 0; g.phase = 'mouvements'; g.visited = Object.fromEntries(g.board.map(c => [c.id, [stateKey(c)]])); g.snapshot = snapshotOf(g); return g; };
@@ -110,4 +110,27 @@ describe('Parties complètes et intégrité du journal', () => {
     expect(changes).toBeGreaterThan(3);
   });
   it('rejette un score ou un instantané incohérent avec les gains confirmés', () => { const g = createGame(['A', 'B'], 1000); const corrupt = clone(g); corrupt.players[0].score = 10; expect(validateSave(corrupt)).toBe(false); const wrongStart = clone(g); wrongStart.snapshot.scores[0] = 2; expect(validateSave(wrongStart)).toBe(false); });
+});
+
+
+describe('modes de jeu et reprise', () => {
+  it('conserve le mode choisi après mouvement et abandon', () => {
+    for (const difficulty of ['normal', 'facile'] as const) {
+      const g = createGame(['A','B','C'], 1000, () => .2, difficulty);
+      expect(g.difficulty).toBe(difficulty); expect(validateSave(g)).toBe(true);
+      const moved = move(g, candidates(g)[0]); expect(moved.difficulty).toBe(difficulty);
+      expect(abandon(moved, 2000).difficulty).toBe(difficulty);
+    }
+  });
+  it('reprend les anciennes parties en Facile sans modifier les données originales', () => {
+    const legacy = createGame(['A','B'], 1000) as Partial<Game>;
+    delete legacy.difficulty;
+    const upgraded = upgradeSave(legacy) as Game;
+    expect(validateSave(upgraded)).toBe(true); expect(upgraded.difficulty).toBe('facile');
+    expect(legacy.difficulty).toBeUndefined(); expect(upgraded.board).toEqual(legacy.board);
+  });
+  it('refuse les modes invalides sans les traiter comme une sauvegarde ancienne', () => {
+    const g = createGame(['A','B'], 1000); (g as unknown as {difficulty:string}).difficulty = 'autre';
+    expect(validateSave(upgradeSave(g))).toBe(false);
+  });
 });

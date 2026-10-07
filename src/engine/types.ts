@@ -12,7 +12,9 @@ export interface Group { color: Color; z: number; ids: number[] }
 export interface Gain { playerId: number; color: Color; points: number; size: number; multiplier: number; crateIds: number[]; trigger: 'rangement' | 'dévoilement' }
 export interface GameEvent { id: number; turn: number; playerId: number; at: number; kind: 'début' | 'mouvement' | 'douane' | 'abandon' | 'fin'; text: string; move?: Move; before?: Crate; after?: Crate; gains?: Gain[]; reverted?: boolean }
 export interface Snapshot { board: Crate[]; scores: number[]; customsId: number | null; opened: boolean }
+export type Difficulty = 'facile' | 'normal';
 export interface Game {
+  difficulty: Difficulty;
   version: 1; rulesVersion: 'dockers-2026-10-07'; id: string;
   board: Crate[]; players: Player[]; activePlayer: number; turn: number; movesMade: number;
   phase: 'mouvements' | 'douane' | 'terminée'; customsId: number | null; opened: boolean;

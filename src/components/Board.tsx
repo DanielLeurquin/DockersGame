@@ -16,7 +16,7 @@ const outlineGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
 function texture(face: Face, name: string) {
   const key = face || name; if (cache.has(key)) return cache.get(key)!;
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256; const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = face ? PALETTE[face] : '#c9a574'; ctx.fillRect(0, 0, 256, 256);
+  ctx.fillStyle = face ? PALETTE[face] : '#d2af78'; ctx.fillRect(0, 0, 256, 256);
   // Deterministic grain avoids external image/font dependencies.
   for (let i = 0; i < 35; i++) { ctx.strokeStyle = `rgba(75,46,19,${i % 3 === 0 ? '.07' : '.025'})`; ctx.beginPath(); const y = (i * 29) % 256; ctx.moveTo(0, y); ctx.bezierCurveTo(75, y + 5, 180, y - 5, 256, y + 1); ctx.stroke(); }
   ctx.strokeStyle = face ? '#b99365' : '#8b6d46'; ctx.lineWidth = 14; ctx.strokeRect(7, 7, 242, 242);
@@ -58,10 +58,10 @@ function CameraRig({ view, onPose }: { view: View; onPose?: (pose: [number, numb
 function Scene({ board, selected, customsId, onSelect, reduced, view, interaction, onCameraPose }: { board: Crate[]; selected: number | null; customsId: number | null; onSelect: (id: number) => void; reduced: boolean; view: View; interaction?: BoardInteraction; onCameraPose?: (pose: [number, number, number]) => void }) {
   const grouped = useMemo(() => new Set(groups(board).flatMap(g => g.ids)), [board]);
   return <>
-    <color attach="background" args={['#e4e9df']} /><ambientLight intensity={1.4} /><directionalLight position={[5, 10, 3]} intensity={2.2} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-6} shadow-camera-right={6} shadow-camera-top={6} shadow-camera-bottom={-6} shadow-normalBias={.04} />
-    <mesh receiveShadow position={[0, -.38, 0]}><boxGeometry args={[7.4, .55, 7.4]} /><meshStandardMaterial color="#6b7863" roughness={.85} /></mesh>
-    {Array.from({ length: 49 }, (_, i) => { const x = i % 7 - 3, y = Math.floor(i / 7) - 3; return <mesh key={i} receiveShadow position={[x, -.075, -y]}><boxGeometry args={[.988, .06, .988]} /><meshStandardMaterial color={(x + y) % 2 ? '#d7ddc8' : '#e3e5d3'} roughness={1} /></mesh>; })}
-    <mesh receiveShadow position={[0, -.69, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[200, 200]} /><meshStandardMaterial color="#e4e9df" /></mesh>
+    <color attach="background" args={['#eadfcb']} /><ambientLight intensity={1.4} /><directionalLight position={[5, 10, 3]} intensity={2.2} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-6} shadow-camera-right={6} shadow-camera-top={6} shadow-camera-bottom={-6} shadow-normalBias={.04} />
+    <mesh receiveShadow position={[0, -.38, 0]}><boxGeometry args={[7.4, .55, 7.4]} /><meshStandardMaterial color="#344f5a" roughness={.85} /></mesh>
+    {Array.from({ length: 49 }, (_, i) => { const x = i % 7 - 3, y = Math.floor(i / 7) - 3; return <mesh key={i} receiveShadow position={[x, -.075, -y]}><boxGeometry args={[.988, .06, .988]} /><meshStandardMaterial color={(x + y) % 2 ? '#caa575' : '#dfbc8c'} roughness={1} /></mesh>; })}
+    <mesh receiveShadow position={[0, -.69, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[200, 200]} /><meshStandardMaterial color="#eadfcb" /></mesh>
     {board.map(c => <CrateMesh key={c.id} crate={c} selected={selected === c.id} customs={customsId === c.id} grouped={grouped.has(c.id) && visible(board, c)} onSelect={onSelect} reduced={reduced} />)}
     {interaction && <InteractionLayer interaction={interaction} />}
     <CameraRig view={view} onPose={onCameraPose} />
@@ -95,8 +95,8 @@ function InteractionLayer({ interaction: i }: { interaction: BoardInteraction })
 }
 export function CubeInspector({ crate, view, reduced, reset, pose }: { crate: Crate; view: InspectionView; reduced: boolean; reset: number; pose?: [number, number, number] }) {
   const c = { ...crate, x: 0, y: 0, z: 0 };
-  const fallback = <p>La vue 3D est indisponible. Consultez les six faces ci-dessous.</p>;
-  return <div className="inspector-canvas"><CanvasBoundary fallback={fallback}><Suspense fallback={fallback}><Canvas key={reset} frameloop="demand" orthographic camera={{ position: [3, 3, 4], zoom: 130, near: .1, far: 100 }} dpr={[1, 1.8]} aria-label="Cube sélectionné, inspection 3D indépendante"><color attach="background" args={['#ebece2']} /><ambientLight intensity={1.7} /><directionalLight position={[4, 6, 3]} intensity={2} /><CrateMesh crate={c} selected={false} customs={false} grouped={false} onSelect={() => {}} reduced={reduced} /><InspectorCamera view={view} pose={pose} /><mesh position={[0, 1.03, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[.1, .15, 32]} /><meshBasicMaterial color="#ffffff" /></mesh></Canvas></Suspense></CanvasBoundary></div>;
+  const fallback = <p>L’inspection 3D est indisponible dans ce navigateur.</p>;
+  return <div className="inspector-canvas"><CanvasBoundary fallback={fallback}><Suspense fallback={fallback}><Canvas key={reset} frameloop="demand" orthographic camera={{ position: [3, 3, 4], zoom: 130, near: .1, far: 100 }} dpr={[1, 1.8]} aria-label="Cube sélectionné, inspection 3D indépendante"><color attach="background" args={['#f1e5d0']} /><ambientLight intensity={1.7} /><directionalLight position={[4, 6, 3]} intensity={2} /><CrateMesh crate={c} selected={false} customs={false} grouped={false} onSelect={() => {}} reduced={reduced} /><InspectorCamera view={view} pose={pose} /><mesh position={[0, 1.03, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[.1, .15, 32]} /><meshBasicMaterial color="#ffffff" /></mesh></Canvas></Suspense></CanvasBoundary></div>;
 }
 function InspectorCamera({ view, pose }: { view: InspectionView; pose?: [number, number, number] }) {
   const { camera, invalidate } = useThree(); const controls = useRef<OrbitControlsImpl>(null);

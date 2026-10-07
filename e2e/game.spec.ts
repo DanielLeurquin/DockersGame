@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-async function start(page: Page, count = 2) {
+async function start(page: Page, count = 2, mode: 'Facile' | 'Normal' = 'Facile') {
   await page.goto('/');
+  await page.getByRole('button', { name: mode, exact: true }).click();
   if (count !== 2) await page.getByRole('button', { name: `${count} joueurs`, exact: true }).click();
   await page.getByLabel('Nom du joueur 1').fill('Camille');
   await page.getByLabel('Nom du joueur 2').fill('Alex');
@@ -52,9 +53,7 @@ test('partie complète dans le navigateur : ouverture, trois coups, Douane, repr
   await expect(page.locator('.turn-number')).toContainText('TOUR 02');
   expect((await savedState(page)).deadline).toBe(saved.deadline);
   await select(page, 'Zanzibar');
-  await page.getByRole('button', { name: 'Inspecter la caisse' }).click();
-  await expect(page.locator('.crate-status')).toContainText('Sous Douane');
-  await page.getByRole('button', { name: 'Fermer le panneau' }).click();
+  await expect(page.getByRole('button', { name: 'Inspecter la caisse' })).toHaveCount(0);
   await tools(page);
   await page.getByRole('button', { name: 'Abandonner la partie' }).click();
   await page.getByRole('button', { name: 'Confirmer l’abandon' }).click();
@@ -64,6 +63,9 @@ test('partie complète dans le navigateur : ouverture, trois coups, Douane, repr
   await expect(page.getByText('DÉCOMPTE FINAL')).toBeVisible();
   expect(errors).toEqual([]);
   await page.screenshot({ path: 'test-results/partie-resultat.png', fullPage: true });
+  await page.getByRole('button', { name: 'Rejouer', exact: true }).click();
+  await page.getByRole('button', { name: 'Préparer une partie' }).click();
+  await expect(page.getByRole('button', { name: 'Normal', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('aide et inspection au clavier sur tablette, aucune pause et orientation stable', async ({ page }) => {
@@ -77,10 +79,11 @@ test('aide et inspection au clavier sur tablette, aucune pause et orientation st
   await start(page, 3);
   await select(page, 'Zanzibar');
   await page.getByRole('button', { name: 'Inspecter la caisse' }).click();
-  await expect(page.locator('.face-chip')).toHaveCount(6);
-  const faces = await page.locator('.face-grid').innerText();
+  await expect(page.locator('.face-chip')).toHaveCount(0);
+  await expect(page.locator('.inspector-canvas')).toBeVisible();
+  const inspectedBoard = (await savedState(page)).board;
   await page.getByRole('button', { name: 'Voir le dessous' }).click();
-  expect(await page.locator('.face-grid').innerText()).toBe(faces);
+  expect((await savedState(page)).board).toEqual(inspectedBoard);
   await expect(page.getByRole('button', { name: /pause/i })).toHaveCount(0);
   await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 820);
   await page.screenshot({ path: 'test-results/plateau-tablette.png', fullPage: true });
@@ -173,7 +176,8 @@ test('écran épuré et commandes accessibles sans cibles WebGL', async ({ page 
   await expect(page.locator('.app-header')).toHaveCount(0); await expect(page.locator('.app-footer')).toHaveCount(0);
   await expect(page.locator('.floating-panel')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Basculer', exact: true })).toBeVisible();
-  await select(page, 'Zanzibar'); await page.getByRole('button', { name: 'Inspecter la caisse' }).click();
+  await select(page, 'Zanzibar'); await tools(page);
+  await page.getByRole('button', { name: 'Commandes accessibles', exact: true }).click();
   await page.getByText('Commandes accessibles du mouvement', { exact: true }).click();
   const target = page.locator('.accessible-moves').getByRole('button', { name: 'Chuter sur la case X 1, Y 2, sol', exact: true });
   await target.focus(); await page.keyboard.press('Enter');
@@ -193,7 +197,7 @@ test('sélection réelle sur le cube 3D et chute directe sur sa case', async ({ 
   await expect(page.locator('.essential-progress .done')).toHaveCount(1);
 });
 
-test('sans WebGL, les six faces et le mouvement accessible restent utilisables', async ({ page }) => {
+test('sans WebGL, l’inspection est indisponible mais le mouvement reste accessible', async ({ page }) => {
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function(this: HTMLCanvasElement, type: string, ...args: unknown[]) {
@@ -203,8 +207,52 @@ test('sans WebGL, les six faces et le mouvement accessible restent utilisables',
   });
   await start(page); await expect(page.locator('.immersive-scene .canvas-fallback')).toBeVisible();
   await select(page, 'Zanzibar'); await page.getByRole('button', { name: 'Inspecter la caisse' }).click();
-  await expect(page.locator('.face-chip')).toHaveCount(6);
+  await expect(page.locator('.face-chip')).toHaveCount(0);
+  await expect(page.locator('.inspector-canvas')).toBeVisible();
+  await expect(page.getByText('L’inspection 3D est indisponible dans ce navigateur.')).toBeVisible();
+  await page.getByRole('button', { name: 'Fermer le panneau' }).click(); await tools(page);
+  await page.getByRole('button', { name: 'Commandes accessibles', exact: true }).click();
   await page.getByText('Commandes accessibles du mouvement', { exact: true }).click();
   await page.locator('.accessible-moves').getByRole('button', { name: 'Chuter sur la case X 1, Y 2, sol', exact: true }).click();
   await expect(page.locator('.essential-progress .done')).toHaveCount(1);
+});
+
+
+test('mode Normal : scores permanents, aucune inspection et reprise du mode', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Normal', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await start(page, 4, 'Normal');
+  await expect(page.locator('.live-score')).toHaveCount(4);
+  await expect(page.locator('.live-score').first()).toBeVisible(); await expect(page.locator('.live-score').last()).toBeVisible();
+  await select(page, 'Zanzibar');
+  await expect(page.getByRole('button', { name: 'Inspecter la caisse' })).toHaveCount(0);
+  await tools(page); await page.getByRole('button', { name: 'Commandes accessibles', exact: true }).click();
+  await page.getByText('Commandes accessibles du mouvement', { exact: true }).click();
+  await page.locator('.accessible-moves').getByRole('button', { name: 'Chuter sur la case X 1, Y 2, sol', exact: true }).click();
+  await expect(page.locator('.face-chip')).toHaveCount(0); await expect(page.locator('.inspector-canvas')).toHaveCount(0);
+  await expect(page.locator('.live-score')).toHaveCount(4);
+  await page.reload(); await expect(page.locator('.live-score')).toHaveCount(4);
+  expect((await savedState(page)).difficulty).toBe('normal');
+  await select(page, 'Zanzibar'); await expect(page.getByRole('button', { name: 'Inspecter la caisse' })).toHaveCount(0);
+});
+
+test('mode Facile : seules les caisses ayant un coup légal sont inspectables', async ({ page }) => {
+  await start(page); await select(page, 'Boston');
+  await expect(page.getByRole('button', { name: 'Inspecter la caisse' })).toHaveCount(0);
+  await select(page, 'Zanzibar'); await page.getByRole('button', { name: 'Inspecter la caisse' }).click();
+  await expect(page.locator('.face-chip')).toHaveCount(0);
+  await expect(page.locator('.inspector-canvas')).toBeVisible();
+  await page.getByRole('button', { name: 'Fermer le panneau' }).click();
+  await overhead(page); await page.getByRole('button', { name: 'Chuter sur la case X 1, Y 2, sol', exact: true }).click();
+  expect((await savedState(page)).difficulty).toBe('facile');
+  await page.getByRole('button', { name: 'Inspecter la caisse' }).click();
+  await expect(page.locator('.face-chip')).toHaveCount(0);
+  await expect(page.locator('.inspector-canvas')).toBeVisible();
+  await page.getByRole('button', { name: 'Fermer le panneau' }).click();
+  await page.getByRole('button', { name: 'Pivoter', exact: true }).click();
+  for (let i=0;i<2;i++) { const right=page.getByRole('button', {name:'Pivoter à droite', exact:true}); await expect(right).toBeEnabled(); await right.click(); }
+  await expect(page.getByRole('button', { name: 'Inspecter la caisse' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Placer la Douane ici' }).click();
+  await select(page, 'Zanzibar'); await expect(page.getByRole('button', { name: 'Inspecter la caisse' })).toHaveCount(0);
+  await expect(page.locator('.live-score')).toHaveCount(2);
 });

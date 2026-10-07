@@ -88,3 +88,48 @@
 
 .floating-actions button.unavailable { opacity: .55; }
 @media (max-width: 400px) { .floating-top { gap: 8px; } .turn-badge strong { max-width: 70px; } .player-symbol { width: 27px; height: 27px; } .essential-progress span { width: 17px; height: 17px; } }
+
+.difficulty-picker { padding: 0; border: 0; margin: 16px 0; }
+.difficulty-picker legend { font-size: 12px; margin-bottom: 7px; }
+.difficulty-picker p { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 7px; }
+.persistent-scores { position: absolute; z-index: 120; top: 95px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; max-width: calc(100% - 24px); }
+.live-score { display: flex; align-items: center; gap: 7px; background: #faf9f0f2; padding: 8px 10px; border: 1px solid #d5dacd; border-radius: 11px; font-size: 12px; white-space: nowrap; }
+.live-score > span { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 6px; color: white; }
+.live-score strong { max-width: 105px; overflow: hidden; text-overflow: ellipsis; }
+.live-score b { font-variant-numeric: tabular-nums; }
+.live-score small { font-size: 10px; }
+.live-score.departed { color: #73796d; }
+.gain-toast { top: 145px; }
+.save-warning { top: 185px; }
+.connect-warning { top: 225px; }
+.floating-panel { top: 145px; max-height: calc(100% - 360px); }
+@media (max-width: 700px) {
+ .persistent-scores { top: 77px; gap: 5px; flex-wrap: wrap; justify-content: center; width: calc(100% - 24px); }
+ .live-score { padding: 5px 7px; gap: 5px; font-size: 11px; }
+ .live-score strong { max-width: 62px; }
+ .live-score > span { width: 18px; height: 18px; }
+ .floating-panel { top: 153px; max-height: calc(100% - 390px); }
+}
+
+/* Bois chaleureux et bleu des quais : les couleurs des compagnies restent distinctes. */
+:root { color: #294853; background: #f4ead7; --ink: #294853; --muted: #89765e; --line: #dfcdb0; --green: #294f60; --cream: #f4ead7; }
+.app-header, .app-footer { border-color: #dfcdb0; }
+.brand-icon, .primary, .floating-actions button.active { background: #294f60; color: #fff4df; }
+.welcome-board { background: #e8d7bb; border: 1px solid #d7bc92; }
+.welcome-caption { color: #345461; }
+.welcome-copy h1 em { color: #aa794b; }
+.immersive-game { background: #eadfcb; }
+.floating-top, .floating-panel, .selection-strip, .floating-actions, .customs-compact, .live-score { background: #fff4e2f5; border-color: #d7bc92; box-shadow: 0 5px 25px #79563118; }
+.floating-top { border-bottom: 3px solid #b98c58; }
+.tool-toggle, .panel-heading button, .selection-strip button, .tools-grid button, .floating-panel .view-bar button, .inspection-controls button, .fall-orientation button, .accessible-moves button { background: #ead7b8; color: #294f60; }
+.fall-orientation, .amplitude, .compact-reason, .opening-hint, .gain-toast, .save-warning, .connect-warning { background: #fff4e2f2; }
+.essential-progress span { background: #e5d1af; }
+.essential-progress .done { background: #345b6b; }
+.essential-progress .current { outline-color: #b58242; }
+.destination-target, .plateau-pivots button { background: #2e6576; border-color: #fff0d3; box-shadow: 0 0 0 3px #2e657655; }
+.destination-target:hover, .destination-target:focus-visible { background: #a67436; }
+.setup input { background: #fff5e5; border-color: #d7bc92; }
+.segmented { background: #e9dcc4; }
+.segmented button.active { background: #fff7e8; color: #294f60; }
+.modal { background: #fff4e2; }
+.panel-inspection .inspection-note { color: #89765e; font-size: 11px; }

@@ -16,6 +16,7 @@ function validBoard(value: unknown): value is Crate[] {
 export function validateSave(value: unknown): value is Game {
   if (!value || typeof value !== 'object') return false;
   const g = value as Game;
+  if (!['facile', 'normal'].includes(g.difficulty)) return false;
   if (g.version !== 1 || g.rulesVersion !== RULES_VERSION || typeof g.id !== 'string' || !validBoard(g.board) || !validBoard(g.snapshot?.board)) return false;
   if (!Array.isArray(g.players) || g.players.length < 2 || g.players.length > 4 || new Set(g.players.map(p => p.color)).size !== g.players.length) return false;
   if (!g.players.every((p, i) => p.id === i && typeof p.name === 'string' && p.name.length <= 30 && COLORS.includes(p.color) && Number.isSafeInteger(p.score) && p.score >= 0 && (p.abandonedAt === null || (Number.isInteger(p.abandonedAt) && p.abandonedAt > 0)))) return false;
@@ -39,13 +40,17 @@ export function validateSave(value: unknown): value is Game {
   if (g.phase === 'terminée' && (!g.result || !Array.isArray(g.result.winners) || !g.result.winners.length || !g.result.winners.every(id => g.players[id]?.abandonedAt === null))) return false;
   return true;
 }
+export function upgradeSave(value: unknown): unknown {
+  if (value && typeof value === 'object' && (value as Game).version === 1 && !Object.hasOwn(value, 'difficulty')) return { ...value, difficulty: 'facile' };
+  return value;
+}
 // Immediate recovery copy bridges a reload before the asynchronous IDB write completes.
 export function stageGame(game: Game): boolean { try { localStorage.setItem('dockers-secours-v1', JSON.stringify(game)); return true; } catch { return false; } }
 export async function loadGame(): Promise<Game | null> {
   let recovery: unknown = null;
-  try { const data = localStorage.getItem('dockers-secours-v1'); if (data) recovery = JSON.parse(data); } catch { /* Preserve unreadable recovery; IDB may still be valid. */ }
+  try { const data = localStorage.getItem('dockers-secours-v1'); if (data) recovery = upgradeSave(JSON.parse(data)); } catch { /* Preserve unreadable recovery; IDB may still be valid. */ }
   let saved: unknown = null;
-  try { const db = await database(); saved = await db.get('parties', 'courante'); }
+  try { const db = await database(); saved = upgradeSave(await db.get('parties', 'courante')); }
   catch { if (validateSave(recovery)) return recovery; throw new Error('Le stockage local est indisponible dans ce navigateur.'); }
   if (validateSave(recovery) && (!validateSave(saved) || recovery.id !== saved.id || recovery.events.length >= saved.events.length)) return recovery;
   if (validateSave(saved)) return saved;

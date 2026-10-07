@@ -1,7 +1,7 @@
 import { definition } from './catalogue';
 import { connected, groupKey, groups, initialBoard, multiplier, stateKey, visible } from './geometry';
 import { evaluateMove, hasContinuation } from './moves';
-import { COLORS, type Game, type GameEvent, type Gain, type Move, type Player, type Snapshot } from './types';
+import { COLORS, type Difficulty, type Game, type GameEvent, type Gain, type Move, type Player, type Snapshot } from './types';
 export const TURN_DURATION = 300_000;
 export const RULES_VERSION = 'dockers-2026-10-07' as const;
 export const clone = <T,>(v: T): T => structuredClone(v);
@@ -9,13 +9,14 @@ const shuffle = <T,>(items: T[], random: () => number): T[] => { const copy = [.
 export const snapshotOf = (game: Game): Snapshot => ({ board: clone(game.board), scores: game.players.map(p => p.score), customsId: game.customsId, opened: game.opened });
 function initHistory(game: Game) { game.visited = Object.fromEntries(game.board.map(c => [c.id, [stateKey(c)]])); }
 function log(game: Game, event: Omit<GameEvent, 'id' | 'turn' | 'playerId'>) { game.events.push({ id: (game.events.at(-1)?.id ?? 0) + 1, turn: game.turn, playerId: game.activePlayer, ...event }); }
-export function createGame(names: string[], now = Date.now(), random = Math.random): Game {
+export function createGame(names: string[], now = Date.now(), random = Math.random, difficulty: Difficulty = 'normal'): Game {
+  if (!['facile', 'normal'].includes(difficulty)) throw new Error('Mode de jeu invalide.');
   if (names.length < 2 || names.length > 4) throw new Error('Une partie nécessite de 2 à 4 joueurs.');
   const colors = shuffle([...COLORS], random);
   const players: Player[] = names.map((name, id) => ({ id, name: name.trim().slice(0, 30) || `Docker ${id + 1}`, color: colors[id], score: 0, abandonedAt: null }));
-  const game: Game = { version: 1, rulesVersion: RULES_VERSION, id: crypto.randomUUID(), board: initialBoard(), players, activePlayer: Math.floor(random() * names.length), turn: 1, movesMade: 0, phase: 'mouvements', customsId: null, opened: false, visited: {}, turnStartedAt: now, deadline: now + TURN_DURATION, snapshot: null as unknown as Snapshot, events: [], result: null };
+  const game: Game = { difficulty, version: 1, rulesVersion: RULES_VERSION, id: crypto.randomUUID(), board: initialBoard(), players, activePlayer: Math.floor(random() * names.length), turn: 1, movesMade: 0, phase: 'mouvements', customsId: null, opened: false, visited: {}, turnStartedAt: now, deadline: now + TURN_DURATION, snapshot: null as unknown as Snapshot, events: [], result: null };
   initHistory(game); game.snapshot = snapshotOf(game);
-  log(game, { kind: 'début', at: now, text: `Début de partie. ${players[game.activePlayer].name} ouvre le jeu ; les couleurs et le premier joueur ont été tirés au sort.` });
+  log(game, { kind: 'début', at: now, text: `Début de partie en mode ${difficulty}. ${players[game.activePlayer].name} ouvre le jeu ; les couleurs et le premier joueur ont été tirés au sort.` });
   if (!hasContinuation(game)) finish(game, now, 'Aucune séquence de trois coups n’est possible.');
   return game;
 }
