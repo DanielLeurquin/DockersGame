@@ -1,0 +1,14 @@
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { Rooms, type RoomSnapshot } from './rooms';
+import { onlineServer } from './http';
+const file = resolve(process.env.DOCKERS_DATA_FILE || 'data/online.json');
+mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
+const snapshot: RoomSnapshot | undefined = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : undefined;
+const rooms = new Rooms(value => { writeFileSync(file + '.tmp', JSON.stringify(value), { mode: 0o600 }); renameSync(file + '.tmp', file); }, snapshot);
+const origins = (process.env.DOCKERS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const server = onlineServer(rooms, { origins, staticDir: process.env.DOCKERS_STATIC_DIR || 'dist' });
+server.requestTimeout = 10_000; server.headersTimeout = 10_000;
+const interval = setInterval(() => { try { rooms.sweep(); } catch { console.error('Sauvegarde serveur indisponible ; vérifiez le volume de données.'); } }, 250);
+server.listen(Number(process.env.PORT || 8787), '0.0.0.0', () => console.log('Service DOCKERS prêt.'));
+for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => { clearInterval(interval); server.close(() => process.exit(0)); });

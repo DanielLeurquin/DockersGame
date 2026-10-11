@@ -133,3 +133,31 @@
 .segmented button.active { background: #fff7e8; color: #294f60; }
 .modal { background: #fff4e2; }
 .panel-inspection .inspection-note { color: #89765e; font-size: 11px; }
+
+/* Online rooms share the wood and maritime palette of the local game. */
+.online-app { min-height: 100dvh; background: var(--sand, #f4efe6); color: #223c47; }
+.online-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:14px 24px; background:#173843; color:#fff; }
+.online-toolbar span, .online-toolbar button, .online-toolbar > div { display:flex; align-items:center; gap:8px; }
+.online-toolbar button { background:transparent; border:1px solid #ffffff66; border-radius:8px; color:white; padding:8px 12px; }
+.online-entry, .online-lobby { max-width:640px; margin:auto; padding:48px 24px; }
+.online-entry h1, .online-lobby h1 { font-size:clamp(28px,5vw,44px); margin:16px 0; }
+.online-entry .segmented { margin:24px 0; }
+.online-form { display:grid; gap:18px; }
+.online-form label, .lobby-settings label { display:grid; gap:8px; font-weight:600; }
+.online-form input:not([type=radio]), .online-form select, .lobby-settings select { background:#fff; border:1px solid #b9c7c7; border-radius:8px; padding:12px; font:inherit; width:100%; }
+.online-form small { font-weight:400; }
+.online-form fieldset { border:1px solid #b9c7c7; border-radius:10px; padding:12px; }
+.online-form fieldset label { display:flex; margin:10px 0; align-items:center; }
+.online-members { list-style:none; padding:0; display:grid; gap:10px; }
+.online-members li { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:16px; border:1px solid #c9d1ce; border-radius:10px; background:#fff8; }
+.online-lobby > button { margin:8px 12px 8px 0; }
+.lobby-settings { display:flex; gap:16px; margin:20px 0; }
+.invite-code { display:flex; align-items:center; gap:16px; padding:20px; background:#fff; border-radius:12px; }
+.invite-code strong, .personal-code { font-size:28px; letter-spacing:3px; font-family:monospace; user-select:all; }
+.invite-code button { padding:10px; border:0; background:#e5edec; border-radius:8px; }
+.personal-code { display:block; background:#f0f5f4; padding:16px; color:#173843; }
+.online-playing .immersive-game { min-height:calc(100dvh - 62px); height:calc(100dvh - 62px); }
+.online-offline { background:#fff1cc; padding:12px 24px; }
+.online-offline button { margin-left:12px; }
+.online-app .results { margin:auto; }
+@media(max-width:650px) { .online-toolbar { padding:10px 12px; font-size:12px; } .online-toolbar > div { flex-wrap:wrap; } .online-entry,.online-lobby { padding:28px 18px; } .online-playing .immersive-game { height:calc(100dvh - 104px); } }

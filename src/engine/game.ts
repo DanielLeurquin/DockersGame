@@ -109,3 +109,16 @@ export function ranking(game: Game): { player: Player; rank: number }[] {
   const departed = game.players.filter(p => p.abandonedAt !== null).sort((a, b) => b.abandonedAt! - a.abandonedAt!);
   return [...active, ...departed].map((player, i, all) => ({ player, rank: player.abandonedAt === null && i > 0 && all[i - 1].score === player.score ? all.findIndex(p => p.abandonedAt === null && p.score === player.score) + 1 : i + 1 }));
 }
+
+// Leaving an online seat outside its turn does not roll back another player's turn.
+export function abandonPlayer(input: Game, playerId: number, now = Date.now()): Game {
+  const player = input.players[playerId];
+  if (!player || input.phase === 'terminée' || player.abandonedAt !== null) return input;
+  if (playerId === input.activePlayer) return abandon(input, now);
+  const game = clone(input);
+  game.players[playerId].abandonedAt = game.players.filter(p => p.abandonedAt !== null).length + 1;
+  game.events.push({ id: (game.events.at(-1)?.id ?? 0) + 1, turn: game.turn, playerId, at: now, kind: 'abandon', text: `${player.name} abandonne hors de son tour. Les coups du joueur actif sont conservés.` });
+  const remaining = game.players.filter(p => p.abandonedAt === null);
+  if (remaining.length === 1) finish(game, now, `${remaining[0].name} remporte la partie : les autres joueurs ont abandonné.`, remaining[0].id);
+  return game;
+}

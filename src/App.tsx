@@ -7,6 +7,8 @@ import { loadGame, saveGame, stageGame } from './storage/save';
 import { Board, type View } from './components/Board';
 import { GameStage } from './components/GameStage';
 import { Modal } from './components/Modal';
+import { OnlineApp } from './online/OnlineApp';
+import { remembered } from './online/client';
 const HELPTEXT = [
   ['Le but du jeu', 'Rangez les caisses en groupes visibles d’au moins deux caisses de même couleur supérieure, au même étage, en contact par une face latérale. Le meilleur score gagne. Une couleur sur le dessus n’accorde pas un droit exclusif de déplacement.'],
   ['Un tour, trois mouvements', 'Vous disposez de cinq minutes pour effectuer exactement trois coups puis votre décision Douane. Le premier mouvement de la partie est une chute depuis le sommet. Une déconnexion temporaire est permise, mais toutes les caisses doivent former un seul ensemble connecté par faces au troisième coup.'],
@@ -18,7 +20,7 @@ const HELPTEXT = [
   ['Temps et abandon', 'Pas de pause. Un tour non terminé après cinq minutes vaut abandon ; une décision à l’échéance exacte est acceptée. L’abandon restaure le plateau et tous les scores du début de tour. Le prochain joueur actif reçoit trois coups et cinq minutes. La couleur abandonnée reste bloquante mais ne marque plus. Le dernier joueur actif gagne.'],
   ['Inspection et fin', 'En mode Facile, seules les caisses ayant au moins un mouvement légal peuvent être inspectées. En mode Normal, l’inspection et le détail des faces sont indisponibles. S’il n’existe pas de séquence valide pour terminer les trois coups, la partie finit immédiatement aux scores acquis, sans restauration. Elle finit aussi si les seules séquences complètes possibles du tour sont trois pivots, sur une ou plusieurs caisses. Les meilleurs scores à égalité partagent la victoire. Les abandons occupent les dernières places, le premier abandon étant dernier.'],
 ];
-export default function App() {
+function LocalApp({ onOnline }: { onOnline: () => void }) {
   const [game, setGame] = useState<Game | null>(null); const gameRef = useRef<Game | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [loaded, setLoaded] = useState(false); const [count, setCount] = useState(2); const [names, setNames] = useState(['', '', '', '']);
@@ -57,7 +59,7 @@ export default function App() {
   function act(operation: (g: Game) => Game) { const latest = gameRef.current; if (!latest || !canEdit) return; try { commit(operation(latest)); setError(''); } catch (e) { setError((e as Error).message); } }
   function begin() { try { commit(createGame(names.slice(0, count), Date.now(), Math.random, difficulty)); setSelected(null); setModal(null); setError(''); setNow(Date.now()); } catch (e) { setError((e as Error).message); } }
   return <div className={`app-shell ${game && !finished ? 'playing' : ''}`}>
-    {(!game || finished) && <header className="app-header"><a className="brand" href={import.meta.env.BASE_URL} onClick={e => { if (game && !finished) e.preventDefault(); }} aria-label="DOCKERS"><span className="brand-icon"><Box size={27} strokeWidth={1.5} /></span><span>DOCKERS<small>LE JEU QUI MUSCLE LE CERVEAU</small></span></a><nav><span className="local-badge"><span /> Partie locale · Français</span><button className="text-button" onClick={() => setModal('aide')}><CircleHelp size={18} /> Les règles</button>{game && <button className="text-button" onClick={() => setModal('nouvelle')}>Nouvelle partie <ArrowRight size={16} /></button>}</nav></header>}
+    {(!game || finished) && <header className="app-header"><a className="brand" href={import.meta.env.BASE_URL} onClick={e => { if (game && !finished) e.preventDefault(); }} aria-label="DOCKERS"><span className="brand-icon"><Box size={27} strokeWidth={1.5} /></span><span>DOCKERS<small>LE JEU QUI MUSCLE LE CERVEAU</small></span></a><nav><button className="text-button" onClick={onOnline}>Jouer en ligne <ArrowRight size={16} /></button><span className="local-badge"><span /> Partie locale · Français</span><button className="text-button" onClick={() => setModal('aide')}><CircleHelp size={18} /> Les règles</button>{game && <button className="text-button" onClick={() => setModal('nouvelle')}>Nouvelle partie <ArrowRight size={16} /></button>}</nav></header>}
     {error && <div className="notice error" role="alert">{error}<button onClick={() => setError('')} aria-label="Fermer le message"><X size={16} /></button></div>}
     {!loaded ? <div className="loading">Ouverture de l’entrepôt…</div> : !game ? <main className="welcome">
       <section className="welcome-copy"><div className="eyebrow"><Anchor size={16} /> BIENVENUE SUR LES QUAIS</div><h1>Un entrepôt.<br />27 caisses.<br /><em>À vous de jouer.</em></h1><p>Faites basculer les caisses, rangez vos couleurs et gardez un coup d’avance. Une affaire de stratégie, sous tous les angles.</p><div className="welcome-facts"><span><Box size={18} /> 27 caisses</span><span><Layers3 size={18} /> 3 étages</span><span><Clock3 size={18} /> 5 min / tour</span></div>
@@ -69,4 +71,9 @@ export default function App() {
     {modal === 'abandon' && <Modal title="Abandonner ce tour ?" onClose={() => setModal(null)}><p>Le plateau et tous les scores seront restaurés à leur état de début de tour. {current?.name} ne pourra plus gagner cette partie. Les autres joueurs continueront, ou le dernier joueur remportera la victoire.</p><div className="modal-actions"><button className="secondary" onClick={() => setModal(null)}>Continuer à jouer</button><button className="danger" onClick={() => { act(g => abandon(g)); setModal(null); select(0); }}>Confirmer l’abandon</button></div><small>Le chronomètre continue pendant cette confirmation.</small></Modal>}
     {modal === 'nouvelle' && <Modal title="Une nouvelle partie ?" onClose={() => setModal(null)}><p>{finished ? 'Le résultat de cette partie sera archivé sur cet appareil.' : 'La partie actuelle sera archivée. Cette action lance une nouvelle configuration ; elle ne met pas la partie en pause.'}</p><div className="modal-actions"><button className="secondary" onClick={() => setModal(null)}>Revenir</button><button className="primary" onClick={() => { if (game && !finished) { setError('Terminez la partie ou abandonnez avant d’en commencer une nouvelle.'); setModal(null); return; } setGame(null); setDifficulty('normal'); gameRef.current = null; select(0); setModal(null); }}>Préparer une partie <ArrowRight size={16} /></button></div></Modal>}
   </div>;
+}
+
+export default function App() {
+  const [online, setOnline] = useState(() => !!remembered());
+  return online ? <OnlineApp onBack={() => setOnline(false)} /> : <LocalApp onOnline={() => setOnline(true)} />;
 }

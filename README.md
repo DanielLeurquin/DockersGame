@@ -1,4 +1,4 @@
-# DOCKERS — application web locale
+# DOCKERS — jeu local et parties privées en ligne
 
 Une application en français pour 2 à 4 joueurs sur un appareil partagé. Plateau 3D en bois stylisé, plateau immersif, déplacements directs et inspection 3D indépendante en mode Facile, arbitrage des mouvements, scores événementiels, Douane, chronomètre de cinq minutes et sauvegarde locale.
 
@@ -18,7 +18,7 @@ npm run build
 npm run preview
 ```
 
-L’application fonctionne sans compte ni serveur de parties. Les ressources sont embarquées : pas de téléchargement de texture, de police ou de modèle pendant une partie. La 3D utilise WebGL ; la liste accessible et les commandes de caisses permettent aussi de jouer si la 3D n’est pas disponible. Une connexion n’est pas nécessaire aux règles une fois la page chargée ; cette version ne comporte pas de service worker pour garantir un rechargement hors ligne.
+Le mode local fonctionne sans compte ni serveur de parties. Le mode en ligne sans compte utilise le service Node décrit dans [le guide en ligne](docs/online.md). Les ressources sont embarquées : pas de téléchargement de texture, de police ou de modèle pendant une partie. La 3D utilise WebGL ; la liste accessible et les commandes de caisses permettent aussi de jouer si la 3D n’est pas disponible. Une connexion n’est pas nécessaire aux règles une fois la page chargée ; cette version ne comporte pas de service worker pour garantir un rechargement hors ligne.
 
 ## Vérification
 
@@ -69,7 +69,7 @@ Le workflow `.github/workflows/pages.yml` compile avec la base `/DockersGame/`, 
 - `src/App.tsx` : parcours local, inspection, actions, aide, résultat et horloge.
 - `tests/` et `e2e/` : vérification métier et navigateur.
 
-Le tutoriel guidé, le multijoueur distant, les comptes et l’IA sont hors du périmètre initial. L’aide intégrée permet de consulter les règles pendant la partie, sans arrêter le chronomètre.
+Le tutoriel guidé, les comptes et l’IA restent hors du périmètre initial. Les parties privées en ligne sont ajoutées conformément à DEC-053 à DEC-078. L’aide intégrée permet de consulter les règles pendant la partie, sans arrêter le chronomètre.
 
 Pour vérifier localement le même chemin que GitHub Pages :
 
@@ -100,3 +100,9 @@ Le thème des quais associe bois chaleureux, sable et bleu marin. L’inspection
 À la reprise, la recherche de suite légale est appliquée avec les règles courantes. Une impasse détectée termine la partie aux scores acquis sans restaurer le plateau. Les coups déjà enregistrés ne sont pas annulés par cette correction.
 
 DEC-052 : si toutes les séquences complètes possibles du tour sont trois pivots, sur une ou plusieurs caisses, terminer aux scores acquis. La recherche considère aussi les déplacements préparés par un pivot et les bascules/chutes déjà effectuées durant le tour. Cette condition ne proscrit pas trois pivots volontairement choisis quand une séquence mixte reste possible.
+
+## Parties privées en ligne
+
+Depuis l’accueil, choisir **Jouer en ligne**. Pseudo unique de 4 à 20 caractères, code de partie de 8 caractères, joueurs prêts, spectateurs et récupération sans compte. Les coups et le temps sont validés par le serveur ; le mode local reste indépendant.
+
+Voir [le guide de lancement, hébergement et validation](docs/online.md). GitHub Pages sert uniquement l’interface : il faut un serveur Node HTTPS pour jouer à distance. La variable GitHub Actions `VITE_ONLINE_URL` permet de raccorder ce serveur à l’interface Pages.
