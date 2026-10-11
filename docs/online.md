@@ -74,7 +74,7 @@ Pour garder l’interface sur GitHub Pages, héberger le serveur séparément et
 - `DOCKERS_ORIGINS=https://danielleurquin.github.io` sur le serveur (origines exactes séparées par des virgules).
 - La variable GitHub Actions **VITE_ONLINE_URL**, avec l’URL HTTPS du serveur, puis relancer le workflow Pages. Cette valeur est publique ; aucun secret n’y est attendu.
 
-Le workflow injecte cette variable dans le build. Si elle est absente, l’interface utilise l’API de sa propre origine ; sur GitHub Pages, une tentative en ligne explique l’indisponibilité du service. Le mode local reste utilisable.
+Le workflow injecte cette variable dans le build. Si elle est absente, le workflow Pages utilise `https://dockersgame.leurquin.org`. Le front de l’image Docker utilise toujours l’API de sa propre origine. Le mode local reste utilisable.
 
 Variables serveur : `PORT` (8787), `DOCKERS_ORIGINS`, `DOCKERS_DATA_FILE` (`data/online.json`) et `DOCKERS_STATIC_DIR` (`dist`). Conserver le répertoire des données sur un volume persistant non servi par le proxy. Le fichier est privé (0600), écrit par remplacement atomique. Au redémarrage, les sessions sont marquées déconnectées, les échéances existantes sont conservées et les joueurs récupèrent leurs places avec leurs secrets. Une sauvegarde illisible arrête le démarrage plutôt que d’effacer les parties.
 

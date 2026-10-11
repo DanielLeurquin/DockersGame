@@ -6,7 +6,7 @@ services:
     ports:
       - "${DOCKERS_BIND_ADDRESS:-0.0.0.0}:${DOCKERS_PORT:-8787}:8787"
     environment:
-      DOCKERS_ORIGINS: "${DOCKERS_ORIGINS:-https://danielleurquin.github.io}"
+      DOCKERS_ORIGINS: "${DOCKERS_ORIGINS:-https://danielleurquin.github.io,https://dockersgame.leurquin.org}"
     volumes:
       - dockers-data:/app/data
     read_only: true

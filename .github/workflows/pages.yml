@@ -25,7 +25,7 @@ jobs:
       - run: npm run build
         env:
           PAGES_BASE: /DockersGame/
-          VITE_ONLINE_URL: ${{ vars.VITE_ONLINE_URL }}
+          VITE_ONLINE_URL: ${{ vars.VITE_ONLINE_URL || 'https://dockersgame.leurquin.org' }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
