@@ -2,7 +2,6 @@ services:
   dockers-game:
     build: .
     restart: unless-stopped
-    init: true
     ports:
       - "${DOCKERS_BIND_ADDRESS:-0.0.0.0}:${DOCKERS_PORT:-8787}:8787"
     environment:
