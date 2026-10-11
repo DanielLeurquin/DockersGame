@@ -1,3 +1,4 @@
+import { uuid } from '../uuid';
 import { definition } from './catalogue';
 import { connected, groupKey, groups, initialBoard, multiplier, stateKey, visible } from './geometry';
 import { evaluateMove, hasContinuation, hasProgressingContinuation } from './moves';
@@ -14,7 +15,7 @@ export function createGame(names: string[], now = Date.now(), random = Math.rand
   if (names.length < 2 || names.length > 4) throw new Error('Une partie nécessite de 2 à 4 joueurs.');
   const colors = shuffle([...COLORS], random);
   const players: Player[] = names.map((name, id) => ({ id, name: name.trim().slice(0, 30) || `Docker ${id + 1}`, color: colors[id], score: 0, abandonedAt: null }));
-  const game: Game = { difficulty, version: 1, rulesVersion: RULES_VERSION, id: crypto.randomUUID(), board: initialBoard(), players, activePlayer: Math.floor(random() * names.length), turn: 1, movesMade: 0, phase: 'mouvements', customsId: null, opened: false, visited: {}, turnStartedAt: now, deadline: now + TURN_DURATION, snapshot: null as unknown as Snapshot, events: [], result: null };
+  const game: Game = { difficulty, version: 1, rulesVersion: RULES_VERSION, id: uuid(), board: initialBoard(), players, activePlayer: Math.floor(random() * names.length), turn: 1, movesMade: 0, phase: 'mouvements', customsId: null, opened: false, visited: {}, turnStartedAt: now, deadline: now + TURN_DURATION, snapshot: null as unknown as Snapshot, events: [], result: null };
   initHistory(game); game.snapshot = snapshotOf(game);
   log(game, { kind: 'début', at: now, text: `Début de partie en mode ${difficulty}. ${players[game.activePlayer].name} ouvre le jeu ; les couleurs et le premier joueur ont été tirés au sort.` });
   const reason = continuationReason(game); if (reason) finish(game, now, reason);

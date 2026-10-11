@@ -1,3 +1,4 @@
+import { uuid } from '../uuid';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Copy, Eye, Globe, LogOut, ShieldCheck } from 'lucide-react';
 import { ranking } from '../engine/game';
@@ -91,7 +92,7 @@ export function OnlineApp({ onBack }: { onBack: () => void }) {
   }
   async function command(c: OnlineCommand) {
     if (!session || busy || !connected) return; setBusy(true); setError('');
-    try { accept(await request('command', { room: session.room, token: session.token, requestId: crypto.randomUUID(), command: c })); }
+    try { accept(await request('command', { room: session.room, token: session.token, requestId: uuid(), command: c })); }
     catch (e) { setError((e as Error).message); try { accept(await request('poll', { room: session.room, token: session.token })); } catch {} }
     finally { setBusy(false); }
   }
