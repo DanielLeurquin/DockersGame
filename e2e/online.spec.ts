@@ -52,6 +52,8 @@ test('reprise sur un autre appareil avec remplacement de l’ancienne connexion'
     await second.reload(); await expect(second.getByRole('heading',{name:'Tout le monde à bord ?'})).toBeVisible(); await expect(second.locator('.online-members li')).toHaveCount(1);
     const sibling=await context.newPage(); await sibling.goto('/'); await expect(sibling.getByRole('heading',{name:'Tout le monde à bord ?'})).toBeVisible();
     await expect(second.getByRole('alert')).toContainText('remplacée'); await sibling.reload(); await expect(sibling.getByRole('heading',{name:'Tout le monde à bord ?'})).toBeVisible();
+    await page.getByRole('button',{name:'Reprendre ma place ici'}).click(); await expect(page.locator('.online-members')).toContainText('Marina'); await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(sibling.getByRole('alert')).toContainText('remplacée');
   } finally { await context.close(); }
 });
 test('refus des pseudos doublons et copie manuelle si le navigateur bloque le presse-papiers',async({browser,page})=>{

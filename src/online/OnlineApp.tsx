@@ -36,8 +36,14 @@ export function OnlineApp({ onBack }: { onBack: () => void }) {
     try { if (!navigator.clipboard) throw new Error(); await navigator.clipboard.writeText(text); setClipboard('Code personnel copié. Conservez-le pour reprendre sur un autre appareil.'); }
     catch { setClipboard('Copie automatique indisponible. Utilisez « Copier » ou sélectionnez votre code personnel.'); }
   }
-  async function restore(saved: OnlineSession) {
-    const value = await request('resume', { room: saved.room, token: saved.token }); accept(value, saved); setError('');
+  async function restore(saved: OnlineSession, manual = false) {
+    let value: OnlineResponse;
+    try { value = await request('resume', { room: saved.room, token: saved.token }); }
+    catch (e) {
+      if (!manual || !(e instanceof RequestError) || e.status !== 401 || !saved.recovery) throw e;
+      value = await request('resume', { room: saved.room, recovery: saved.recovery });
+    }
+    accept(value, saved); setError('');
   }
   useEffect(() => {
     mounted.current = true; let cancelled = false;
@@ -99,7 +105,7 @@ export function OnlineApp({ onBack }: { onBack: () => void }) {
   return <div className={`online-app ${game && game.phase !== 'terminée' ? 'online-playing' : ''}`}>
     <div className="online-toolbar"><span><Globe size={17} /> {room ? `Partie privée ${room.code}` : 'Sur les quais, en ligne'}</span>{member && <span>{member.name} · {spectator ? 'Spectateur' : 'Joueur'}{!connected && ' · Déconnecté'}</span>}<div>{session?.recovery && game?.phase !== 'terminée' && <button onClick={() => setModal('recovery')}><ShieldCheck size={16} /> Mon code personnel</button>}<button onClick={() => room ? setModal('leave') : onBack()}>{room ? <LogOut size={16} /> : <ArrowLeft size={16} />}{room ? 'Quitter' : 'Retour au jeu local'}</button></div></div>
     {error && <p className="notice error" role="alert">{error}</p>}
-    {room && !connected && game?.phase !== 'terminée' && <div className="online-offline" role="status">Le temps continue. <button disabled={busy} onClick={async () => { if (!session || replacing.current) return; replacing.current = true; setBusy(true); try { await restore(session); } catch (e) { setError((e as Error).message); } finally { replacing.current = false; setBusy(false); } }}>Reprendre ma place ici</button></div>}
+    {room && !connected && game?.phase !== 'terminée' && <div className="online-offline" role="status">Le temps continue. <button disabled={busy} onClick={async () => { if (!session || replacing.current) return; replacing.current = true; setBusy(true); try { await restore(session, true); } catch (e) { setError((e as Error).message); } finally { replacing.current = false; setBusy(false); } }}>Reprendre ma place ici</button></div>}
     {!room ? <main className="online-entry"><div className="eyebrow">PARTIES PRIVÉES · SANS COMPTE</div><h1>Retrouvez vos dockers.</h1><p>Un pseudo, un code partagé et vos amis autour du même entrepôt.</p><div className="segmented">{([['create','Créer'],['join','Rejoindre'],['recover','Reprendre ma place']] as const).map(([key,label]) => <button key={key} onClick={() => setScreen(key)} className={screen === key ? 'active' : ''} aria-pressed={screen === key}>{label}</button>)}</div>
       <form className="online-form" onSubmit={e => { e.preventDefault(); void enter(); }}>
         {screen !== 'recover' && <label>Pseudo<input aria-label="Pseudo en ligne" value={name} onChange={e => setName(e.target.value)} required minLength={4} maxLength={80} autoComplete="nickname" /><small>4 à 20 caractères · unique dans le salon</small></label>}
