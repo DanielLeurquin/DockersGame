@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+dist
+dist-server
+data
+.env*
+*.tsbuildinfo
+playwright-report
+test-results
+.cache
+work

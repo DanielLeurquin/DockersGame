@@ -22,6 +22,8 @@ Le mode local fonctionne sans compte ni serveur de parties. Le mode en ligne san
 
 ## Vérification
 
+Pour héberger le front et le back sur votre serveur tout en conservant GitHub Pages, voir [le guide Docker Compose](docs/docker.md).
+
 ```sh
 npm test
 npm run test:e2e

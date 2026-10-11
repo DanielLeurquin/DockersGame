@@ -55,6 +55,8 @@ Playwright lance automatiquement le serveur de parties et Vite. Ses données son
 
 ## Hébergement
 
+Pour un serveur personnel, utiliser [Docker Compose](docker.md) : une image sert le front et le back, avec un volume persistant, tout en acceptant le front GitHub Pages.
+
 **GitHub Pages ne peut pas exécuter le serveur de parties.** Publier le code sur main ou déployer l’interface statique ne fournit pas un service en ligne. Le serveur nécessite un hébergement Node accessible en HTTPS, avec un disque persistant. Aucun hébergeur ni domaine n’est créé par ce changement.
 
 Pour servir l’interface et le serveur depuis le même hébergement :
